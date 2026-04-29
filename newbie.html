@@ -552,9 +552,9 @@
       const showNotification = (message, type = 'info') => setNotification({ message, type });
 
       // 计算阶段进度：任务完成(50%) + 模块学习(30%) + 交付物提交(20%)
-      const calculatePhaseProgress = (phaseId, tasks, modulesDone, dels) => {
+      const calculatePhaseProgress = (phaseId, tasks, modulesDone, dels, completes) => {
         const phaseTasks = tasks.filter(t => t.phase === phaseId);
-        const taskDone = phaseTasks.filter(t => taskCompletes[t.title]).length;
+        const taskDone = phaseTasks.filter(t => completes[t.title]).length;
         const taskRate = phaseTasks.length > 0 ? taskDone / phaseTasks.length : 0;
 
         const moduleRate = phaseId === 'phase1' ? modulesDone / MODULES.length : 0;
@@ -579,7 +579,7 @@
         const allTasks = getAllTasks();
         setPhasesProgress(prev => ({
           ...prev,
-          phase1: calculatePhaseProgress('phase1', allTasks, modulesDone, deliverables)
+          phase1: calculatePhaseProgress('phase1', allTasks, modulesDone, deliverables, taskCompletes)
         }));
       };
 
@@ -590,7 +590,7 @@
         const allTasks = getAllTasks();
         const newProgress = {};
         PHASES.forEach(p => {
-          newProgress[p.id] = calculatePhaseProgress(p.id, allTasks, modulesDone, deliverables);
+          newProgress[p.id] = calculatePhaseProgress(p.id, allTasks, modulesDone, deliverables, nextCompletes);
         });
         setPhasesProgress(newProgress);
         showNotification(completed ? '任务已完成' : '任务已取消完成', 'success');
@@ -608,7 +608,7 @@
         const allTasks = getAllTasks();
         const newProgress = {};
         PHASES.forEach(p => {
-          newProgress[p.id] = calculatePhaseProgress(p.id, allTasks, modulesDone, nextDeliverables);
+          newProgress[p.id] = calculatePhaseProgress(p.id, allTasks, modulesDone, nextDeliverables, taskCompletes);
         });
         setPhasesProgress(newProgress);
         showNotification('交付物已提交', 'success');
