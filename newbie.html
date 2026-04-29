@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>麦风 - 新人入职指引</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
+    .phase-card { transition: all 0.3s ease; cursor: pointer; }
+    .phase-card:hover { transform: translateY(-2px); }
+    .phase-card.locked { opacity: 0.5; filter: grayscale(0.5); }
+    .phase-card.active { box-shadow: 0 0 0 2px #3b82f6, 0 4px 12px rgba(59,130,246,0.3); }
+    .phase-card.completed { box-shadow: 0 0 0 2px #10b981; }
+    .progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .module-card { transition: all 0.2s; border-left: 4px solid #e5e7eb; }
+    .module-card.completed { border-left-color: #10b981; }
+    .task-check { width: 20px; height: 20px; border: 2px solid #d1d5db; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .task-check.checked { background: #10b981; border-color: #10b981; }
+    .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+    .metric-card { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+    .agent-btn { transition: all 0.2s; }
+    .agent-btn:hover { transform: scale(1.05); }
+    .qa-item { border-left: 3px solid #e5e7eb; transition: all 0.2s; }
+    .qa-item.answered { border-left-color: #10b981; }
+    .qa-item.pending { border-left-color: #f59e0b; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
+    .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 24px; }
+    .deliverable-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; }
+    .notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; z-index: 9999; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ========== 常量定义 ==========
+    const PHASES = [
+      { id: 'phase1', name: '第一阶段', subtitle: '新人初期', week: '第1周', desc: '融入团队，了解组织架构，学习部门核心工作', color: '#10b981', unlockThreshold: 0 },
+      { id: 'phase2', name: '第二阶段', subtitle: '进阶期', week: '第3-4周', desc: '掌握业务全链路逻辑，对齐OKR目标', color: '#f59e0b', unlockThreshold: 70 },
+      { id: 'phase3', name: '第三阶段', subtitle: '养成期', week: '第5-8周', desc: '初步参与核心业务，确定业务方向，准备转正', color: '#8b5cf6', unlockThreshold: 80 },
+      { id: 'phase4', name: '第四阶段', subtitle: '转正期', week: '第9-12周', desc: '深度参与业务，完成转正答辩', color: '#ec4899', unlockThreshold: 90 }
+    ];
+
+    const DEPT_INFO = {
+      name: 'AE供应链-供应链商家规则&体验',
+      knowledgeBase: 'https://alidocs.dingtalk.com/i/spaces/nb9XJjZvjP8pOXyA/overview',
+      coreMetrics: '效率&体验',
+      dashboard: 'https://fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190073.0.0.d7a0543fsCHJIA&id=1568845&_dt_ac=2AkYTKz2YBIuhP2F%2F%2F00ozL2SozER7SITNV%2BNuYgGo3gU14RdQzz4yXlLV4yY3w59X8%2FyWheM26zDlCD%2F&_dt_sig=PTPXG49LUd4qkaCeiGjB4iRxuSApdJkmhx2ijMkmYgg%3D&_dt_ts=1777009936',
+      manager: '赵倩',
+      mentor: '潇淦'
+    };
+
+    const MODULES = [
+      { id: 'mod-1', name: '效率-及时发货率', owner: '潇淦', knowledgeBase: '', metric: '及时发货率', dashboard: 'https://sg.fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190076.0.0.6a12543fm463d1&id=365969', status: 'pending' },
+      { id: 'mod-2', name: '效率-成交不卖率', owner: '石怡', knowledgeBase: '', metric: 'GMV挽回', dashboard: 'https://fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190073.0.0.d7a0543f5p24pL&id=1711018', status: 'pending' },
+      { id: 'mod-3', name: '商家体验', owner: '颜西', knowledgeBase: 'https://alidocs.dingtalk.com/i/nodes/QG53mjyd800agdlKHlKQ6wk586zbX04v', metric: '商家全模式体验', dashboard: 'https://fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190073.0.0.d7a0543fRYKwiW&id=1837786', status: 'pending' },
+      { id: 'mod-4', name: '团队内小二AI能力成长', owner: '小麦', knowledgeBase: 'https://aliyuque.antfin.com/moh6q1/kg7h1z', metric: '/', dashboard: '/', status: 'pending' }
+    ];
+
+    const RELATED_DEPTS = [
+      { name: 'AE供应链-商品供应链', manager: '赵鹏（曾福）' },
+      { name: 'AE供应链-AE货通供应链运营', manager: '瞿秋颜（申萩）' },
+      { name: 'AE供应链-供应链网络运营', manager: '谷扬明（明谷）' },
+      { name: 'AE供应链-品仓解决方案', manager: '王小广（魁克）' },
+      { name: 'AE供应链-计划供应链', manager: '郭礼飞（朴野）' },
+      { name: 'AE供应链-竞对调研', manager: '马红艳（玛歌）、施心睿(樰栗)' }
+    ];
+
+    const NEWBIE_INFO = { name: '麦风', joinDate: '2026-05-01', mentor: '潇淦', dayCount: 0 };
+
+    // ========== 通知 ==========
+    function Notification({ message, type, onClose }) {
+      const bgColors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6' };
+      useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
+      return <div className="notification" style={{ background: bgColors[type] || bgColors.info }}>{message}</div>;
+    }
+
+    // ========== 阶段卡片 ==========
+    function PhaseCards({ currentPhase, phasesProgress, onSelectPhase }) {
+      return (
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          {PHASES.map((phase, idx) => {
+            const isLocked = phasesProgress[phase.id] === undefined && idx > 0;
+            const isActive = currentPhase === phase.id;
+            const isCompleted = (phasesProgress[phase.id] || 0) >= 100;
+            const progress = phasesProgress[phase.id] || 0;
+            return (
+              <div
+                key={phase.id}
+                onClick={() => !isLocked && onSelectPhase(phase.id)}
+                className={`phase-card bg-white rounded-xl p-4 card-shadow ${isLocked ? 'locked' : ''} ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: phase.color + '20', color: phase.color }}>{phase.week}</span>
+                  {isLocked && <i className="fas fa-lock text-gray-400"></i>}
+                  {isCompleted && <i className="fas fa-check-circle text-green-500"></i>}
+                </div>
+                <h3 className="font-bold text-gray-800">{phase.name}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{phase.subtitle}</p>
+                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{phase.desc}</p>
+                {isLocked ? (
+                  <div className="mt-2 text-xs text-gray-400">需上一阶段进度 ≥ {phase.unlockThreshold}%</div>
+                ) : (
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-gray-500">进度</span>
+                      <span style={{ color: phase.color }}>{progress}%</span>
+                    </div>
+                    <div className="progress-bar"><div className="progress-bar-fill" style={{ width: `${progress}%`, background: phase.color }}></div></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ========== 模块学习卡片 ==========
+    function ModuleCard({ module, onToggle, disabled }) {
+      const [checked, setChecked] = useState(false);
+      const handleToggle = () => {
+        if (disabled) return;
+        setChecked(!checked);
+        onToggle(module.id, !checked);
+      };
+      return (
+        <div className={`module-card bg-white rounded-lg p-4 card-shadow mb-3 ${checked ? 'completed' : ''}`}>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-semibold text-gray-800">{module.name}</h4>
+                <span className="text-xs text-gray-400">Owner: {module.owner}</span>
+              </div>
+              <p className="text-sm text-gray-500">核心指标：{module.metric}</p>
+              <div className="flex gap-2 mt-2">
+                {module.knowledgeBase && module.knowledgeBase !== '/' && (
+                  <a href={module.knowledgeBase} target="_blank" className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100"><i className="fas fa-book mr-1"></i>知识库</a>
+                )}
+                {module.dashboard && module.dashboard !== '/' && (
+                  <a href={module.dashboard} target="_blank" className="text-xs px-3 py-1 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100"><i className="fas fa-chart-bar mr-1"></i>看板</a>
+                )}
+              </div>
+            </div>
+            <div className="ml-3 flex flex-col items-center gap-1">
+              <div className={`task-check ${checked ? 'checked' : ''}`} onClick={handleToggle}>
+                {checked && <i className="fas fa-check text-white text-xs"></i>}
+              </div>
+              <span className="text-xs text-gray-400">{checked ? '已完成' : '未完成'}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ========== 学习任务列表 ==========
+    function TaskList({ phase, modules, moduleStatus, onModuleToggle, onOpenAgent }) {
+      const tasks = getTasksForPhase(phase, modules);
+      return (
+        <div className="space-y-3">
+          {tasks.map((task, idx) => (
+            <div key={idx} className="bg-white rounded-lg p-4 card-shadow">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5"><div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{idx + 1}</div></div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-800">{task.title}</h4>
+                  <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                  {task.links && task.links.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {task.links.map((link, li) => (
+                        <a key={li} href={link.url} target="_blank" className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200"><i className="fas fa-external-link-alt mr-1"></i>{link.name}</a>
+                      ))}
+                    </div>
+                  )}
+                  {task.action && (
+                    <button onClick={() => onOpenAgent(task.action, task)} className="agent-btn mt-2 text-xs px-4 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+                      <i className="fas fa-robot mr-1"></i>{task.actionLabel || '打开Agent'}
+                    </button>
+                  )}
+                  {task.deliverable && (
+                    <div className="mt-2 text-xs text-amber-600"><i className="fas fa-file-alt mr-1"></i>交付物：{task.deliverable}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {phase === 'phase2' && (
+            <div className="bg-white rounded-lg p-4 card-shadow">
+              <h4 className="font-semibold text-gray-800 mb-3">协同部门了解</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {RELATED_DEPTS.map((dept, idx) => (
+                  <div key={idx} className="bg-gray-50 rounded-lg p-3 text-sm">
+                    <div className="font-medium text-gray-700">{dept.name}</div>
+                    <div className="text-xs text-gray-400 mt-1">主管：{dept.manager}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {phase !== 'phase1' && (
+            <div className="bg-white rounded-lg p-4 card-shadow">
+              <h4 className="font-semibold text-gray-800 mb-3">模块学习</h4>
+              {modules.map(m => (
+                <ModuleCard key={m.id} module={m} onToggle={onModuleToggle} disabled={phase === 'phase1'} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function getTasksForPhase(phaseId, modules) {
+      const baseTasks = {
+        phase1: [
+          { title: '了解组织架构', description: '查看AE整体组织架构图，重点了解「供应链」在AE组织中的位置，以及本部门（供应链商家规则&体验）与周边团队（商品供应链、供应链网络、品仓解决方案、计划供应链等）的协同关系', links: [{ name: '组织架构图', url: '#' }], action: 'orgChart', actionLabel: '查看架构', deliverable: '组织架构图学习笔记' },
+          { title: '学习部门知识库', description: '阅读部门知识库文档，了解部门核心职责、业务范围和工作流程', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '部门知识库学习总结' },
+          { title: '了解核心指标', description: '学习部门核心指标定义、计算口径和当前表现', links: [{ name: '数据看板', url: DEPT_INFO.dashboard }], deliverable: '' },
+          { title: '认识团队成员', description: '与团队成员逐一认识，了解各自负责的业务领域', action: 'chat', actionLabel: '发起聊天', deliverable: '' },
+          { title: '与师兄对接', description: `添加师兄 ${DEPT_INFO.mentor} 的钉钉，建立日常沟通渠道`, action: 'chat', actionLabel: '联系师兄', deliverable: '' }
+        ],
+        phase2: [
+          { title: '学习业务全链路', description: '深入了解供应链商家规则&体验的全链路业务流程', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '各模块业务学习报告' },
+          { title: '学习各模块业务', description: '逐一学习各业务模块的知识库、核心指标和看板', links: modules.filter(m => m.knowledgeBase).map(m => ({ name: m.name, url: m.knowledgeBase })), deliverable: '' },
+          { title: '1V1对齐OKR', description: '与主管进行1对1沟通，对齐实习期的OKR目标', action: 'okr', actionLabel: '查看OKR系统', deliverable: '实习期目标设定' },
+          { title: '模拟商家后台操作', description: '在测试环境模拟商家后台操作，熟悉系统功能', action: 'merchantPortal', actionLabel: '打开商家后台', deliverable: '' },
+          { title: '走访商家与仓库', description: '实地走访商家或仓库，了解一线业务场景', action: 'visit', actionLabel: '登记走访', deliverable: '走仓心得、访商记录' }
+        ],
+        phase3: [
+          { title: '参与核心业务模块', description: '在Owner指导下参与核心业务模块的实际工作', deliverable: '业务参与实践报告' },
+          { title: '确定业务方向', description: '第5周与主管沟通，确定后续深耕的业务方向', deliverable: '' },
+          { title: '准备转正答辩PPT', description: '整理实习期学习成果和业务产出，制作转正答辩PPT', deliverable: '转正答辩PPT' },
+          { title: '沟通转正事项', description: '第8周与主管沟通转正答辩准备事项和注意事项', deliverable: '' }
+        ],
+        phase4: [
+          { title: '深度参与业务', description: '在确定的业务方向上深度参与，产出业务价值', deliverable: '' },
+          { title: '参加转正答辩', description: '第12周参加转正答辩会，展示实习期成果', deliverable: '转正答辩记录' },
+          { title: '完成转正', description: '根据答辩反馈继续改进，完成转正流程', deliverable: '' }
+        ]
+      };
+      return baseTasks[phaseId] || [];
+    }
+
+    // ========== 进展概览 ==========
+    function ProgressOverview({ data }) {
+      return (
+        <div className="bg-white rounded-xl p-4 card-shadow mb-6">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><i className="fas fa-chart-pie text-blue-500"></i> 学习进展概览</h3>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="metric-card rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-blue-600">{data.overallProgress}%</div>
+              <div className="text-xs text-gray-500 mt-1">总体完成度</div>
+              <div className="progress-bar mt-2"><div className="progress-bar-fill bg-blue-500" style={{width: `${data.overallProgress}%`}}></div></div>
+            </div>
+            <div className="metric-card rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-green-600">{data.teamIntegration}%</div>
+              <div className="text-xs text-gray-500 mt-1">团队融入度</div>
+              <div className="progress-bar mt-2"><div className="progress-bar-fill bg-green-500" style={{width: `${data.teamIntegration}%`}}></div></div>
+            </div>
+            <div className="metric-card rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-purple-600">{data.businessMastery}%</div>
+              <div className="text-xs text-gray-500 mt-1">业务掌握度</div>
+              <div className="progress-bar mt-2"><div className="progress-bar-fill bg-purple-500" style={{width: `${data.businessMastery}%`}}></div></div>
+            </div>
+          </div>
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">交付物状态</h4>
+            <div className="flex flex-wrap gap-2">
+              {data.deliverables.map((d, i) => (
+                <span key={i} className={`deliverable-badge ${d.status === 'completed' ? 'bg-green-100 text-green-700' : d.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <i className={`fas ${d.status === 'completed' ? 'fa-check' : d.status === 'in_progress' ? 'fa-spinner fa-spin' : 'fa-clock'}`}></i>
+                  {d.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ========== Q&A系统 ==========
+    function QASystem({ qaList, onAddQA }) {
+      const [showForm, setShowForm] = useState(false);
+      const [question, setQuestion] = useState('');
+      const [assignee, setAssignee] = useState('');
+      const [module, setModule] = useState('');
+
+      const handleSubmit = () => {
+        if (!question.trim()) return;
+        onAddQA({ question, assignedTo: assignee, module, status: 'pending', answer: '', hasNewAnswer: false });
+        setQuestion(''); setAssignee(''); setModule(''); setShowForm(false);
+      };
+
+      return (
+        <div className="bg-white rounded-xl p-4 card-shadow mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2"><i className="fas fa-comments text-amber-500"></i> Q&A 问答</h3>
+            <button onClick={() => setShowForm(!showForm)} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700"><i className="fas fa-plus mr-1"></i>提问</button>
+          </div>
+
+          {showForm && (
+            <div className="bg-gray-50 rounded-lg p-3 mb-3">
+              <textarea value={question} onChange={e => setQuestion(e.target.value)} placeholder="请输入你的问题..." rows="3" className="w-full text-sm mb-2"></textarea>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <select value={assignee} onChange={e => setAssignee(e.target.value)} className="text-sm">
+                  <option value="">指定回答人（选填）</option>
+                  <option value="潇淦">潇淦</option>
+                  <option value="石怡">石怡</option>
+                  <option value="颜西">颜西</option>
+                  <option value="小麦">小麦</option>
+                  <option value="赵倩">赵倩（主管）</option>
+                </select>
+                <select value={module} onChange={e => setModule(e.target.value)} className="text-sm">
+                  <option value="">关联模块（选填）</option>
+                  {MODULES.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                </select>
+              </div>
+              <button onClick={handleSubmit} className="text-xs px-4 py-1.5 bg-green-600 text-white rounded-full hover:bg-green-700">提交问题</button>
+            </div>
+          )}
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {qaList.length === 0 && <div className="text-sm text-gray-400 text-center py-4">暂无问题，点击右上角提问</div>}
+            {qaList.map((qa, idx) => (
+              <div key={idx} className={`qa-item bg-gray-50 rounded-lg p-3 ${qa.status}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-800 font-medium">{qa.question}</p>
+                    <div className="flex gap-2 mt-1 text-xs text-gray-400">
+                      {qa.module && <span>模块：{qa.module}</span>}
+                      {qa.assignedTo && <span>指定：{qa.assignedTo}</span>}
+                    </div>
+                    {qa.answer && (
+                      <div className="mt-2 bg-white rounded p-2 text-sm text-gray-600">
+                        <span className="text-green-600 font-medium">回答：</span>{qa.answer}
+                      </div>
+                    )}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${qa.status === 'answered' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {qa.status === 'answered' ? '已解答' : '待解答'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ========== Agent弹窗 ==========
+    function AgentModal({ type, data, onClose }) {
+      const contents = {
+        orgChart: { title: 'AE组织架构图', icon: 'fa-sitemap', content: (
+          <div className="space-y-3 text-sm max-h-96 overflow-y-auto">
+            {/* 根节点 */}
+            <div className="bg-blue-600 text-white rounded-lg p-3 text-center font-bold">AE</div>
+
+            {/* 一级部门 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-blue-50 rounded-lg p-2 text-center font-medium">行业中心</div>
+              <div className="bg-blue-50 rounded-lg p-2 text-center font-medium">跨境业务中台</div>
+            </div>
+
+            {/* 供应链（高亮） */}
+            <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-3 border-2 border-blue-400">
+              <div className="font-bold text-blue-800 text-center mb-2">供应链</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white rounded p-2 text-xs">
+                  <div className="font-medium text-gray-700">商品供应链</div>
+                  <div className="text-gray-400 mt-1">库存计划 · 库存策略 · 仓发体验</div>
+                </div>
+                <div className="bg-white rounded p-2 text-xs border-2 border-green-400">
+                  <div className="font-medium text-green-700">供应链商家规则&体验</div>
+                  <div className="text-gray-500 mt-1 space-y-0.5">
+                    <div>效率-及时发货率（潇淦）</div>
+                    <div>效率-成交不卖率（石怡）</div>
+                    <div>商家体验（颜西）</div>
+                    <div>小二AI能力成长（小麦）</div>
+                  </div>
+                </div>
+                <div className="bg-white rounded p-2 text-xs">
+                  <div className="font-medium text-gray-700">供应链网络</div>
+                  <div className="text-gray-400 mt-1">合单运营 · 跨境解决方案 · APL</div>
+                </div>
+                <div className="bg-white rounded p-2 text-xs">
+                  <div className="font-medium text-gray-700">品仓解决方案</div>
+                  <div className="text-gray-400 mt-1">仓网规划 · 卡单&物流不可达 · 平台仓&配</div>
+                </div>
+                <div className="bg-white rounded p-2 text-xs">
+                  <div className="font-medium text-gray-700">计划供应链</div>
+                  <div className="text-gray-400 mt-1">主计划 · 行业计划 · 国家计划 · NN计划</div>
+                </div>
+                <div className="bg-white rounded p-2 text-xs">
+                  <div className="font-medium text-gray-700">竞对调研</div>
+                </div>
+                <div className="bg-white rounded p-2 text-xs col-span-2">
+                  <div className="font-medium text-gray-700">AE货通供应链运营</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 其他一级部门 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-50 rounded-lg p-2 text-center text-sm">客服&体验</div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center text-sm">法务</div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center text-sm">产品</div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center text-sm">国家业务</div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
+              <div className="font-medium text-gray-700 mb-1">国家业务子部门：</div>
+              <div className="flex flex-wrap gap-2">
+                <span>英联邦</span><span>美洲地区</span><span>韩日服饰</span>
+              </div>
+            </div>
+
+            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+              <div className="font-medium text-green-800 mb-1">本部门信息</div>
+              <div className="text-xs text-gray-600 space-y-0.5">
+                <div>主管：赵倩（谷淳）</div>
+                <div>新人：麦风 · 师兄：潇淦</div>
+              </div>
+            </div>
+          </div>
+        )},
+        chat: { title: '发起聊天', icon: 'fa-comment-dots', content: <div className="text-center py-6 text-gray-500">请在钉钉中搜索对应同事发起聊天</div> },
+        merchantPortal: { title: '商家后台模拟', icon: 'fa-store', content: <div className="text-center py-6 text-gray-500">商家后台模拟环境入口<br/>请联系IT或师兄获取测试账号</div> },
+        visit: { title: '走访登记', icon: 'fa-walking', content: (
+          <div className="space-y-3">
+            <div><label className="text-sm text-gray-600">走访类型</label><select className="w-full text-sm mt-1"><option>商家走访</option><option>仓库走访</option></select></div>
+            <div><label className="text-sm text-gray-600">走访日期</label><input type="date" className="w-full text-sm mt-1" /></div>
+            <div><label className="text-sm text-gray-600">心得记录</label><textarea rows="3" className="w-full text-sm mt-1" placeholder="记录走访心得..."></textarea></div>
+            <button className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm hover:bg-blue-700">提交记录</button>
+          </div>
+        )},
+        okr: { title: 'OKR系统', icon: 'fa-bullseye', content: <div className="text-center py-6 text-gray-500">OKR系统入口<br/>请通过内部系统访问OKR进行目标设定</div> },
+        deliverable: { title: '提交交付物', icon: 'fa-file-upload', content: (
+          <div className="space-y-3">
+            <div><label className="text-sm text-gray-600">交付物名称</label><input className="w-full text-sm mt-1" value={data?.deliverable || ''} readOnly /></div>
+            <div><label className="text-sm text-gray-600">钉钉文档链接</label><input className="w-full text-sm mt-1" placeholder="粘贴alidocs链接..." /></div>
+            <button className="w-full bg-green-600 text-white py-2 rounded-lg text-sm hover:bg-green-700">提交交付物</button>
+          </div>
+        )}
+      };
+      const c = contents[type] || { title: 'Agent', icon: 'fa-robot', content: <div className="text-center py-6 text-gray-500">功能开发中</div> };
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2"><i className={`fas ${c.icon} text-blue-500`}></i>{c.title}</h3>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><i className="fas fa-times"></i></button>
+            </div>
+            {c.content}
+          </div>
+        </div>
+      );
+    }
+
+    // ========== 主应用 ==========
+    function App() {
+      const [currentPhase, setCurrentPhase] = useState('phase1');
+      const [moduleStatus, setModuleStatus] = useState({});
+      const [phasesProgress, setPhasesProgress] = useState({ phase1: 0, phase2: 0, phase3: 0, phase4: 0 });
+      const [qaList, setQaList] = useState([]);
+      const [modal, setModal] = useState(null);
+      const [notification, setNotification] = useState(null);
+      const [deliverables, setDeliverables] = useState([
+        { phase: '第一阶段', name: '组织架构图学习笔记', status: 'pending', date: '待开始' },
+        { phase: '第一阶段', name: '部门知识库学习总结', status: 'pending', date: '待开始' },
+        { phase: '第二阶段', name: '各模块业务学习报告', status: 'pending', date: '待开始' },
+        { phase: '第二阶段', name: '实习期目标设定', status: 'pending', date: '待开始' },
+        { phase: '第三阶段', name: '业务参与实践报告', status: 'pending', date: '待开始' },
+        { phase: '第三阶段', name: '转正答辩PPT', status: 'pending', date: '待开始' },
+        { phase: '第四阶段', name: '转正答辩记录', status: 'pending', date: '待开始' }
+      ]);
+
+      const showNotification = (message, type = 'info') => setNotification({ message, type });
+
+      const handleModuleToggle = (moduleId, checked) => {
+        setModuleStatus({ ...moduleStatus, [moduleId]: checked });
+        const completedCount = Object.values({ ...moduleStatus, [moduleId]: checked }).filter(Boolean).length;
+        const total = MODULES.length;
+        const mastery = Math.round((completedCount / total) * 100);
+        setPhasesProgress(prev => ({ ...prev, [currentPhase]: Math.min(100, mastery) }));
+      };
+
+      const handleAddQA = (qa) => {
+        setQaList([...qaList, qa]);
+        showNotification('问题已提交', 'success');
+      };
+
+      const progressData = {
+        overallProgress: Math.round(Object.values(phasesProgress).reduce((a, b) => a + b, 0) / 4),
+        teamIntegration: Math.min(100, Math.round((phasesProgress.phase1 || 0) * 0.8 + (phasesProgress.phase2 || 0) * 0.2)),
+        businessMastery: Math.round(((phasesProgress.phase2 || 0) + (phasesProgress.phase3 || 0) + (phasesProgress.phase4 || 0)) / 3),
+        modules: MODULES.map(m => ({
+          name: m.name,
+          progress: moduleStatus[m.id] ? 100 : 0,
+          score: null,
+          status: moduleStatus[m.id] ? 'completed' : 'pending'
+        })),
+        deliverables,
+        qaStats: { total: qaList.length, answered: qaList.filter(q => q.status === 'answered').length, pending: qaList.filter(q => q.status === 'pending').length }
+      };
+
+      const currentPhaseInfo = PHASES.find(p => p.id === currentPhase);
+      const isPhaseLocked = (phaseId) => {
+        const idx = PHASES.findIndex(p => p.id === phaseId);
+        if (idx === 0) return false;
+        const prevPhase = PHASES[idx - 1];
+        return (phasesProgress[prevPhase.id] || 0) < prevPhase.unlockThreshold;
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+          {modal && <AgentModal type={modal.type} data={modal.data} onClose={() => setModal(null)} />}
+
+          {/* Header */}
+          <div className="gradient-bg text-white">
+            <div className="max-w-5xl mx-auto px-4 py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-bold">新人入职指引</h1>
+                  <p className="text-sm text-blue-100 mt-1">{DEPT_INFO.name}</p>
+                </div>
+                <div className="text-right text-sm text-blue-100">
+                  <div>{NEWBIE_INFO.name} · 第 {NEWBIE_INFO.dayCount} 天</div>
+                  <div>师兄：{NEWBIE_INFO.mentor}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-5xl mx-auto px-4 py-6">
+            <ProgressOverview data={progressData} />
+            <QASystem qaList={qaList} onAddQA={handleAddQA} />
+
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 mb-3">阶段学习</h2>
+              <PhaseCards currentPhase={currentPhase} phasesProgress={phasesProgress} onSelectPhase={(id) => { if (!isPhaseLocked(id)) setCurrentPhase(id); else showNotification('该阶段尚未解锁，请先完成上一阶段学习', 'warning'); }} />
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded-full" style={{ background: currentPhaseInfo?.color }}></div>
+                <h2 className="text-lg font-semibold text-gray-800">{currentPhaseInfo?.name} · {currentPhaseInfo?.subtitle}</h2>
+                <span className="text-xs text-gray-400">{currentPhaseInfo?.week}</span>
+              </div>
+              <TaskList
+                phase={currentPhase}
+                modules={MODULES}
+                moduleStatus={moduleStatus}
+                onModuleToggle={handleModuleToggle}
+                onOpenAgent={(type, data) => setModal({ type, data })}
+              />
+            </div>
+
+            {/* 部门信息 */}
+            <div className="bg-white rounded-xl p-4 card-shadow mb-6">
+              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><i className="fas fa-info-circle text-blue-500"></i> 部门信息</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-500">部门名称：</span>{DEPT_INFO.name}</div>
+                <div><span className="text-gray-500">主管：</span>{DEPT_INFO.manager}</div>
+                <div><span className="text-gray-500">核心指标：</span>{DEPT_INFO.coreMetrics}</div>
+                <div><span className="text-gray-500">师兄：</span>{DEPT_INFO.mentor}</div>
+                <div className="col-span-2 flex gap-2 mt-1">
+                  <a href={DEPT_INFO.knowledgeBase} target="_blank" className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100"><i className="fas fa-book mr-1"></i>部门知识库</a>
+                  <a href={DEPT_INFO.dashboard} target="_blank" className="text-xs px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100"><i className="fas fa-chart-bar mr-1"></i>数据看板</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

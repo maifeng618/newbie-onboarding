@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>供应链商家规则&体验部 - 新人入职Landing系统（主管配置端）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
+    .task-item { transition: all 0.2s; border-left: 4px solid #e5e7eb; }
+    .task-item.completed { border-left-color: #10b981; background: #f0fdf4; }
+    .task-item.in-progress { border-left-color: #3b82f6; background: #eff6ff; }
+    .phase-header { border-left: 4px solid; padding-left: 12px; margin: 16px 0 8px; }
+    .metric-card { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+    .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+    .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+    .role-btn.active { background: #3b82f6; color: white; }
+    .owner-badge { position: relative; }
+    .owner-badge .badge-count { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 9999px; padding: 0 6px; font-size: 12px; }
+    input, textarea, select { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 12px; width: 100%; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; ring: 2px solid #bfdbfe; }
+    .notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; z-index: 9999; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ========== 常量定义 ==========
+    const ROLES = {
+      manager: { id: 'manager', name: '主管', icon: '👨‍💼', color: 'bg-blue-600', desc: '负责整体规划、部门及模块配置、归档路径设置、Owner分配、新人跟进' },
+      owner: { id: 'owner', name: '模块Owner', icon: '🎯', color: 'bg-green-600', desc: '负责模块学习资料及题目库填写与提交' }
+    };
+
+    const PHASES = [
+      { id: 'pre', name: '入职前准备阶段', week: '入职前', desc: '主管配置部门、归档路径及业务模块资料', color: '#3b82f6' },
+      { id: 'phase1', name: '第一阶段（新人初期）', week: '第1周', deliverable: '第1周最后工作日', desc: '融入团队，了解组织架构，学习部门核心工作', color: '#10b981' },
+      { id: 'phase2', name: '第二阶段（3-4周）', week: '第2-4周', deliverable: '第4周最后工作日', desc: '掌握业务全链路逻辑，对齐OKR目标', color: '#f59e0b' },
+      { id: 'phase3', name: '第三阶段（5-8周）', week: '第5-8周', deliverable: '第8周最后工作日', desc: '初步参与核心业务，确定业务方向，准备转正', color: '#8b5cf6' },
+      { id: 'phase4', name: '第四阶段（9-12周）', week: '第9-12周', deliverable: '第12周转正答辩', desc: '深度参与业务，完成转正答辩', color: '#ec4899' }
+    ];
+
+    const DEFAULT_DELIVERABLES = [
+      { phase: 'phase1', phaseName: '第一阶段（新人初期）', name: '组织架构图学习笔记', path: '' },
+      { phase: 'phase1', phaseName: '第一阶段（新人初期）', name: '部门知识库学习总结', path: '' },
+      { phase: 'phase2', phaseName: '第二阶段（3-4周）', name: '各模块业务学习报告', path: '' },
+      { phase: 'phase2', phaseName: '第二阶段（3-4周）', name: '实习期目标设定', path: '' },
+      { phase: 'phase3', phaseName: '第三阶段（5-8周）', name: '业务参与实践报告', path: '' },
+      { phase: 'phase3', phaseName: '第三阶段（5-8周）', name: '转正答辩PPT', path: '' },
+      { phase: 'phase4', phaseName: '第四阶段（9-12周）', name: '转正答辩记录', path: '' }
+    ];
+
+    // ========== 初始数据 ==========
+    const INITIAL_DEPT_CONFIG = {
+      deptName: 'AE供应链-供应链商家规则&体验',
+      knowledgeBase: 'https://alidocs.dingtalk.com/i/spaces/nb9XJjZvjP8pOXyA/overview',
+      coreMetrics: '效率&体验',
+      dashboard: 'https://fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190073.0.0.d7a0543fsCHJIA&id=1568845&_dt_ac=2AkYTKz2YBIuhP2F%2F%2F00ozL2SozER7SITNV%2BNuYgGo3gU14RdQzz4yXlLV4yY3w59X8%2FyWheM26zDlCD%2F&_dt_sig=PTPXG49LUd4qkaCeiGjB4iRxuSApdJkmhx2ijMkmYgg%3D&_dt_ts=1777009936'
+    };
+
+    const INITIAL_ARCHIVE_CONFIG = {
+      archiveUrl: 'https://alidocs.dingtalk.com/i/nodes/lyQod3RxJKe9QjOMi40NzYn1Wkb4Mw9r',
+      qaFolder: 'Q&A问答',
+      deliverableFolder: '阶段交付物',
+      autoArchive: true,
+      qaArchiveUrl: 'https://alidocs.dingtalk.com/i/nodes/14lgGw3P8vxjwogPCpObjzerV5daZ90D',
+      stageDeliverables: [...DEFAULT_DELIVERABLES]
+    };
+
+    const INITIAL_MODULES = [
+      { id: 'mod-1', name: '效率-及时发货率', owner: '潇淦', knowledgeBase: '', metric: '及时发货率', dashboard: 'https://sg.fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190076.0.0.6a12543fm463d1&id=365969', questionBank: '', ownerQuestionBank: '', hasExam: false, status: 'pending' },
+      { id: 'mod-2', name: '效率-成交不卖率', owner: '石怡', knowledgeBase: '', metric: 'GMV挽回', dashboard: 'https://fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190073.0.0.d7a0543f5p24pL&id=1711018', questionBank: '', ownerQuestionBank: '', hasExam: false, status: 'pending' },
+      { id: 'mod-3', name: '商家体验', owner: '颜西', knowledgeBase: 'https://alidocs.dingtalk.com/i/nodes/QG53mjyd800agdlKHlKQ6wk586zbX04v', metric: '商家全模式体验', dashboard: 'https://fbi.alibaba-inc.com/dashboard/view/page.htm?spm=a2o1z.8190073.0.0.d7a0543fRYKwiW&id=1837786', questionBank: '', ownerQuestionBank: '', hasExam: false, status: 'pending' },
+      { id: 'mod-4', name: '团队内小二AI能力成长', owner: '小麦', knowledgeBase: 'https://aliyuque.antfin.com/moh6q1/kg7h1z', metric: '/', dashboard: '/', questionBank: '', ownerQuestionBank: '', hasExam: false, status: 'pending' }
+    ];
+
+    const NEWBIE_INFO = {
+      name: '麦风',
+      joinDate: '2026-05-01',
+      mentor: '潇淦',
+      dept: 'AE供应链-供应链商家规则&体验'
+    };
+
+    const RELATED_DEPTS = [
+      'AE供应链-商品供应链',
+      'AE供应链-AE货通供应链运营',
+      'AE供应链-供应链网络运营',
+      'AE供应链-品仓解决方案',
+      'AE供应链-计划供应链',
+      'AE供应链-竞对调研'
+    ];
+
+    const NEWBIE_PROGRESS_DATA = {
+      overallProgress: 0,
+      teamIntegration: 0,
+      businessMastery: 0,
+      modules: [
+        { name: '效率-及时发货率', progress: 0, score: null, status: 'pending' },
+        { name: '效率-成交不卖率', progress: 0, score: null, status: 'pending' },
+        { name: '商家体验', progress: 0, score: null, status: 'pending' },
+        { name: '团队内小二AI能力成长', progress: 0, score: null, status: 'pending' }
+      ],
+      deliverables: [
+        { phase: '第一阶段', name: '组织架构图学习笔记', status: 'pending', date: '待开始' },
+        { phase: '第一阶段', name: '部门知识库学习总结', status: 'pending', date: '待开始' },
+        { phase: '第二阶段', name: '各模块业务学习报告', status: 'pending', date: '待开始' },
+        { phase: '第二阶段', name: '实习期目标设定', status: 'pending', date: '待开始' },
+        { phase: '第三阶段', name: '业务参与实践报告', status: 'pending', date: '待开始' },
+        { phase: '第三阶段', name: '转正答辩PPT', status: 'pending', date: '待开始' },
+        { phase: '第四阶段', name: '转正答辩记录', status: 'pending', date: '待开始' }
+      ],
+      qaStats: { total: 0, answered: 0, pending: 0 }
+    };
+
+    // ========== 通知组件 ==========
+    function Notification({ message, type, onClose }) {
+      const bgColors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6' };
+      useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
+      return <div className="notification" style={{ background: bgColors[type] || bgColors.info }}>{message}</div>;
+    }
+
+    // ========== 角色切换 ==========
+    function RoleSwitcher({ currentRole, onSwitch, ownerPendingCount }) {
+      return (
+        <div className="flex gap-2 bg-white p-1 rounded-lg shadow-sm inline-flex">
+          {Object.values(ROLES).map(role => (
+            <button
+              key={role.id}
+              onClick={() => onSwitch(role.id)}
+              className={`role-btn px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${currentRole === role.id ? 'active shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <span>{role.icon}</span>
+              <span>{role.name}</span>
+              {role.id === 'owner' && ownerPendingCount > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{ownerPendingCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    // ========== 部门配置表单 ==========
+    function DepartmentConfigForm({ config, submitted, onSubmit }) {
+      const [formData, setFormData] = useState(config || INITIAL_DEPT_CONFIG);
+      const [editing, setEditing] = useState(!submitted);
+
+      const handleSubmit = () => {
+        if (!formData.knowledgeBase || !formData.coreMetrics || !formData.dashboard) {
+          alert('请填写所有必填项');
+          return;
+        }
+        onSubmit(formData);
+        setEditing(false);
+      };
+
+      if (!editing && submitted) {
+        return (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-green-800 flex items-center gap-2"><i className="fas fa-check-circle"></i> 部门学习资料已配置</h3>
+              <button onClick={() => setEditing(true)} className="text-sm text-blue-600 hover:underline">编辑</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-gray-500">部门名称：</span>{formData.deptName}</div>
+              <div><span className="text-gray-500">核心指标：</span>{formData.coreMetrics}</div>
+              <div className="col-span-2"><span className="text-gray-500">知识库：</span><a href={formData.knowledgeBase} target="_blank" className="text-blue-600 hover:underline">{formData.knowledgeBase}</a></div>
+              <div className="col-span-2"><span className="text-gray-500">看板：</span><a href={formData.dashboard} target="_blank" className="text-blue-600 hover:underline">{formData.dashboard}</a></div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-lg p-4 mb-4 card-shadow">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><i className="fas fa-building text-blue-500"></i> 部门学习资料配置</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">部门名称</label>
+              <input value={formData.deptName} onChange={e => setFormData({...formData, deptName: e.target.value})} placeholder="请输入部门名称" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">知识库链接 <span className="text-red-500">*</span></label>
+              <input value={formData.knowledgeBase} onChange={e => setFormData({...formData, knowledgeBase: e.target.value})} placeholder="https://alidocs.dingtalk.com/..." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">核心指标 <span className="text-red-500">*</span></label>
+              <input value={formData.coreMetrics} onChange={e => setFormData({...formData, coreMetrics: e.target.value})} placeholder="如：及时发货率、商家体验" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">看板链接 <span className="text-red-500">*</span></label>
+              <input value={formData.dashboard} onChange={e => setFormData({...formData, dashboard: e.target.value})} placeholder="https://fbi.alibaba-inc.com/..." />
+            </div>
+            <button onClick={handleSubmit} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i className="fas fa-save mr-1"></i> 保存配置</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ========== 归档路径配置 ==========
+    function ArchivePathConfigForm({ config, submitted, onSubmit }) {
+      const [formData, setFormData] = useState(config || INITIAL_ARCHIVE_CONFIG);
+      const [editing, setEditing] = useState(!submitted);
+
+      const addDeliverable = () => {
+        setFormData({...formData, stageDeliverables: [...formData.stageDeliverables, { phase: 'phase1', phaseName: '第一阶段（新人初期）', name: '', path: '' }]});
+      };
+      const removeDeliverable = (idx) => {
+        const arr = [...formData.stageDeliverables];
+        arr.splice(idx, 1);
+        setFormData({...formData, stageDeliverables: arr});
+      };
+      const updateDeliverable = (idx, field, value) => {
+        const arr = [...formData.stageDeliverables];
+        arr[idx][field] = value;
+        if (field === 'phase') {
+          const p = PHASES.find(ph => ph.id === value);
+          arr[idx].phaseName = p ? p.name : value;
+        }
+        setFormData({...formData, stageDeliverables: arr});
+      };
+
+      const handleSubmit = () => {
+        if (!formData.archiveUrl) { alert('请填写归档路径'); return; }
+        onSubmit(formData);
+        setEditing(false);
+      };
+
+      if (!editing && submitted) {
+        return (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-green-800 flex items-center gap-2"><i className="fas fa-check-circle"></i> 归档路径已配置</h3>
+              <button onClick={() => setEditing(true)} className="text-sm text-blue-600 hover:underline">编辑</button>
+            </div>
+            <div className="text-sm space-y-1">
+              <div><span className="text-gray-500">归档路径：</span><a href={formData.archiveUrl} target="_blank" className="text-blue-600 hover:underline">{formData.archiveUrl}</a></div>
+              <div><span className="text-gray-500">Q&A文件夹：</span>{formData.qaFolder}</div>
+              <div><span className="text-gray-500">交付物文件夹：</span>{formData.deliverableFolder}</div>
+              <div><span className="text-gray-500">自动归档：</span>{formData.autoArchive ? '开启' : '关闭'}</div>
+              <div className="mt-2"><span className="text-gray-500">交付物数量：</span>{formData.stageDeliverables.length} 个</div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-lg p-4 mb-4 card-shadow">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><i className="fas fa-folder-open text-amber-500"></i> 归档路径配置</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">归档文件夹链接 <span className="text-red-500">*</span></label>
+              <input value={formData.archiveUrl} onChange={e => setFormData({...formData, archiveUrl: e.target.value})} placeholder="https://alidocs.dingtalk.com/..." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Q&A及交付物归档链接</label>
+              <input value={formData.qaArchiveUrl || ''} onChange={e => setFormData({...formData, qaArchiveUrl: e.target.value})} placeholder="https://alidocs.dingtalk.com/..." />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Q&A文件夹名称</label>
+                <input value={formData.qaFolder} onChange={e => setFormData({...formData, qaFolder: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">交付物文件夹名称</label>
+                <input value={formData.deliverableFolder} onChange={e => setFormData({...formData, deliverableFolder: e.target.value})} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="autoArchive" checked={formData.autoArchive} onChange={e => setFormData({...formData, autoArchive: e.target.checked})} className="w-4 h-4" />
+              <label htmlFor="autoArchive" className="text-sm text-gray-700">开启自动归档</label>
+            </div>
+
+            <div className="border-t pt-3 mt-3">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">各阶段交付物配置</h4>
+              {formData.stageDeliverables.map((del, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 mb-2 items-center">
+                  <div className="col-span-3">
+                    <select value={del.phase} onChange={e => updateDeliverable(idx, 'phase', e.target.value)} className="text-sm">
+                      {PHASES.filter(p => p.id !== 'pre').map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-4"><input value={del.name} onChange={e => updateDeliverable(idx, 'name', e.target.value)} placeholder="交付物名称" className="text-sm" /></div>
+                  <div className="col-span-4"><input value={del.path} onChange={e => updateDeliverable(idx, 'path', e.target.value)} placeholder="归档子路径（选填）" className="text-sm" /></div>
+                  <div className="col-span-1"><button onClick={() => removeDeliverable(idx)} className="text-red-500 hover:text-red-700"><i className="fas fa-trash"></i></button></div>
+                </div>
+              ))}
+              <button onClick={addDeliverable} className="text-sm text-blue-600 hover:underline mt-1"><i className="fas fa-plus mr-1"></i>添加交付物</button>
+            </div>
+            <button onClick={handleSubmit} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i className="fas fa-save mr-1"></i> 保存配置</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ========== 模块配置 ==========
+    function ModuleConfigForm({ modules, submitted, onSubmit }) {
+      const [list, setList] = useState(modules && modules.length > 0 ? modules : INITIAL_MODULES);
+      const [editing, setEditing] = useState(!submitted);
+
+      const addModule = () => setList([...list, { id: `mod-${Date.now()}`, name: '', owner: '', knowledgeBase: '', metric: '', dashboard: '', questionBank: '', ownerQuestionBank: '', hasExam: false, status: 'pending' }]);
+      const removeModule = (idx) => { const arr = [...list]; arr.splice(idx, 1); setList(arr); };
+      const updateModule = (idx, field, value) => { const arr = [...list]; arr[idx][field] = value; setList(arr); };
+
+      const handleSubmit = () => {
+        for (const m of list) { if (!m.name || !m.owner) { alert('模块名称和Owner为必填项'); return; } }
+        onSubmit(list);
+        setEditing(false);
+      };
+
+      if (!editing && submitted) {
+        return (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-green-800 flex items-center gap-2"><i className="fas fa-check-circle"></i> 业务模块已配置 ({list.length}个)</h3>
+              <button onClick={() => setEditing(true)} className="text-sm text-blue-600 hover:underline">编辑</button>
+            </div>
+            <div className="space-y-2">
+              {list.map(m => (
+                <div key={m.id} className="flex items-center justify-between bg-white rounded p-2 text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{m.name}</span>
+                    <span className="text-gray-500">Owner: {m.owner}</span>
+                    {m.knowledgeBase && <a href={m.knowledgeBase} target="_blank" className="text-blue-600 hover:underline text-xs">知识库</a>}
+                    {m.dashboard && m.dashboard !== '/' && <a href={m.dashboard} target="_blank" className="text-blue-600 hover:underline text-xs">看板</a>}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${m.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{m.status === 'completed' ? '资料已提交' : '待填写'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-lg p-4 mb-4 card-shadow">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><i className="fas fa-cubes text-purple-500"></i> 业务模块及Owner配置</h3>
+          {list.map((m, idx) => (
+            <div key={m.id} className="border rounded-lg p-3 mb-3 bg-gray-50">
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">模块名称 <span className="text-red-500">*</span></label>
+                  <input value={m.name} onChange={e => updateModule(idx, 'name', e.target.value)} placeholder="如：发货履约" className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Owner姓名 <span className="text-red-500">*</span></label>
+                  <input value={m.owner} onChange={e => updateModule(idx, 'owner', e.target.value)} placeholder="Owner姓名" className="text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">知识库链接</label>
+                  <input value={m.knowledgeBase} onChange={e => updateModule(idx, 'knowledgeBase', e.target.value)} placeholder="https://alidocs.dingtalk.com/..." className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">核心指标</label>
+                  <input value={m.metric} onChange={e => updateModule(idx, 'metric', e.target.value)} placeholder="核心指标" className="text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">看板链接</label>
+                  <input value={m.dashboard} onChange={e => updateModule(idx, 'dashboard', e.target.value)} placeholder="https://fbi.alibaba-inc.com/..." className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">题库链接</label>
+                  <input value={m.questionBank} onChange={e => updateModule(idx, 'questionBank', e.target.value)} placeholder="选填" className="text-sm" />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={() => removeModule(idx)} className="text-xs text-red-500 hover:text-red-700"><i className="fas fa-trash mr-1"></i>删除模块</button>
+              </div>
+            </div>
+          ))}
+          <button onClick={addModule} className="text-sm text-blue-600 hover:underline mb-3"><i className="fas fa-plus mr-1"></i>添加模块</button>
+          <div><button onClick={handleSubmit} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i className="fas fa-save mr-1"></i> 保存模块配置</button></div>
+        </div>
+      );
+    }
+
+    // ========== Owner模块资料填写 ==========
+    function OwnerModuleForm({ modules, onUpdate }) {
+      const [localModules, setLocalModules] = useState(modules || []);
+      const handleUpdate = (idx, field, value) => {
+        const arr = [...localModules];
+        arr[idx][field] = value;
+        setLocalModules(arr);
+      };
+      const handleSubmit = (idx) => {
+        const m = localModules[idx];
+        if (!m.knowledgeBase || !m.metric || !m.dashboard) { alert('请填写知识库、核心指标和看板链接'); return; }
+        const arr = [...localModules];
+        arr[idx].status = 'completed';
+        setLocalModules(arr);
+        onUpdate(arr);
+      };
+
+      return (
+        <div className="space-y-4">
+          {localModules.map((m, idx) => (
+            <div key={m.id} className="bg-white rounded-lg p-4 card-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-800">{m.name} <span className="text-sm font-normal text-gray-500">（Owner: {m.owner}）</span></h4>
+                {m.status === 'completed' ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已提交</span> : <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">待填写</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">知识库链接 <span className="text-red-500">*</span></label>
+                  <input value={m.knowledgeBase} onChange={e => handleUpdate(idx, 'knowledgeBase', e.target.value)} placeholder="https://alidocs.dingtalk.com/..." className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">核心指标 <span className="text-red-500">*</span></label>
+                  <input value={m.metric} onChange={e => handleUpdate(idx, 'metric', e.target.value)} placeholder="核心指标" className="text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">看板链接 <span className="text-red-500">*</span></label>
+                  <input value={m.dashboard} onChange={e => handleUpdate(idx, 'dashboard', e.target.value)} placeholder="https://fbi.alibaba-inc.com/..." className="text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">题库链接（选填）</label>
+                  <input value={m.questionBank} onChange={e => handleUpdate(idx, 'questionBank', e.target.value)} placeholder="选填" className="text-sm" />
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-gray-600 mb-1">业务Owner题目库（必填，用于新人自测）</label>
+                <textarea value={m.ownerQuestionBank} onChange={e => handleUpdate(idx, 'ownerQuestionBank', e.target.value)} placeholder="请填写题目库内容或链接" rows="3" className="text-sm" />
+              </div>
+              {m.status !== 'completed' && (
+                <button onClick={() => handleSubmit(idx)} className="btn-success px-4 py-2 rounded-lg text-sm font-medium"><i className="fas fa-check mr-1"></i> 提交模块资料</button>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ========== 新人进展概览 ==========
+    function NewbieProgressPanel({ data }) {
+      const [expanded, setExpanded] = useState(false);
+      return (
+        <div className="bg-white rounded-lg p-4 mb-4 card-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2"><i className="fas fa-chart-line text-blue-500"></i> 新人学习进展概览 — {NEWBIE_INFO.name}</h3>
+            <button onClick={() => setExpanded(!expanded)} className="text-sm text-blue-600 hover:underline">{expanded ? '收起' : '展开'}</button>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-3">
+            <div className="metric-card rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-blue-600">{data.overallProgress}%</div>
+              <div className="text-xs text-gray-500 mt-1">总体完成度</div>
+              <div className="progress-bar mt-2"><div className="progress-bar-fill bg-blue-500" style={{width: `${data.overallProgress}%`}}></div></div>
+            </div>
+            <div className="metric-card rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-green-600">{data.teamIntegration}%</div>
+              <div className="text-xs text-gray-500 mt-1">团队融入度</div>
+              <div className="progress-bar mt-2"><div className="progress-bar-fill bg-green-500" style={{width: `${data.teamIntegration}%`}}></div></div>
+            </div>
+            <div className="metric-card rounded-lg p-3 text-center">
+              <div className="text-2xl font-bold text-purple-600">{data.businessMastery}%</div>
+              <div className="text-xs text-gray-500 mt-1">业务掌握度</div>
+              <div className="progress-bar mt-2"><div className="progress-bar-fill bg-purple-500" style={{width: `${data.businessMastery}%`}}></div></div>
+            </div>
+          </div>
+          {expanded && (
+            <div className="space-y-3 border-t pt-3">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">模块学习进度</h4>
+                {data.modules.map((m, i) => (
+                  <div key={i} className="flex items-center gap-3 mb-2">
+                    <span className="text-sm w-32 truncate">{m.name}</span>
+                    <div className="flex-1 progress-bar"><div className="progress-bar-fill bg-blue-500" style={{width: `${m.progress}%`}}></div></div>
+                    <span className="text-xs text-gray-500 w-12 text-right">{m.progress}%</span>
+                    {m.score && <span className="text-xs text-green-600">{m.score}分</span>}
+                  </div>
+                ))}
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">交付物状态</h4>
+                <div className="flex flex-wrap gap-2">
+                  {data.deliverables.map((d, i) => (
+                    <span key={i} className={`text-xs px-2 py-1 rounded-full ${d.status === 'completed' ? 'bg-green-100 text-green-700' : d.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {d.name} ({d.status === 'completed' ? '已完成' : d.status === 'in_progress' ? '进行中' : '待开始'})
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-4 text-sm">
+                <div><span className="text-gray-500">Q&A总计：</span>{data.qaStats.total}</div>
+                <div><span className="text-green-600">已解答：</span>{data.qaStats.answered}</div>
+                <div><span className="text-yellow-600">待解答：</span>{data.qaStats.pending}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ========== 任务列表 ==========
+    function TaskItem({ task, onToggle }) {
+      const statusColors = { pending: 'border-gray-300', 'in-progress': 'border-blue-500 in-progress', done: 'border-green-500 completed' };
+      const statusLabels = { pending: '待处理', 'in-progress': '进行中', done: '已完成' };
+      return (
+        <div className={`task-item bg-white rounded-lg p-3 mb-2 ${statusColors[task.status] || ''}`}>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-700' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}优先级</span>
+                {task.type === 'owner-task' && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Owner任务</span>}
+                {task.type === 'reactive' && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">被动触发</span>}
+                <span className="text-xs text-gray-400">{task.estimatedTime}</span>
+              </div>
+              <h4 className="font-medium text-gray-800">{task.title}</h4>
+              <p className="text-sm text-gray-500 mt-0.5">{task.description}</p>
+              {task.deliverable && <div className="text-xs text-gray-400 mt-1">交付物：{task.deliverable}</div>}
+            </div>
+            <div className="ml-3 flex flex-col items-end gap-2">
+              <span className={`text-xs font-medium ${task.status === 'done' ? 'text-green-600' : task.status === 'in-progress' ? 'text-blue-600' : 'text-gray-400'}`}>{statusLabels[task.status]}</span>
+              <button onClick={() => onToggle(task.id)} className={`text-xs px-3 py-1 rounded-full ${task.status === 'done' ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>
+                {task.status === 'done' ? '标记未完成' : '标记完成'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function StatsPanel({ tasks }) {
+      const total = tasks.length;
+      const done = tasks.filter(t => t.status === 'done').length;
+      const inProgress = tasks.filter(t => t.status === 'in-progress').length;
+      const pending = tasks.filter(t => t.status === 'pending').length;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      return (
+        <div className="grid grid-cols-5 gap-3 mb-4">
+          <div className="bg-white rounded-lg p-3 text-center card-shadow"><div className="text-xl font-bold text-gray-800">{total}</div><div className="text-xs text-gray-500">总任务</div></div>
+          <div className="bg-white rounded-lg p-3 text-center card-shadow"><div className="text-xl font-bold text-yellow-600">{pending}</div><div className="text-xs text-gray-500">待处理</div></div>
+          <div className="bg-white rounded-lg p-3 text-center card-shadow"><div className="text-xl font-bold text-blue-600">{inProgress}</div><div className="text-xs text-gray-500">进行中</div></div>
+          <div className="bg-white rounded-lg p-3 text-center card-shadow"><div className="text-xl font-bold text-green-600">{done}</div><div className="text-xs text-gray-500">已完成</div></div>
+          <div className="bg-white rounded-lg p-3 text-center card-shadow"><div className="text-xl font-bold text-purple-600">{pct}%</div><div className="text-xs text-gray-500">完成进度</div></div>
+        </div>
+      );
+    }
+
+    // ========== 生成Landing文件 ==========
+    function LandingGenerator({ canGenerate, newbieInfo, onGenerate }) {
+      const [generated, setGenerated] = useState(false);
+      if (!canGenerate) {
+        return (
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 mb-4 text-center">
+            <i className="fas fa-lock text-gray-400 text-2xl mb-2"></i>
+            <p className="text-sm text-gray-500">完成以下配置后可生成Landing文件：</p>
+            <ul className="text-xs text-gray-400 mt-1 space-y-1">
+              <li>部门学习资料配置</li>
+              <li>归档路径配置</li>
+              <li>业务模块及Owner配置</li>
+            </ul>
+          </div>
+        );
+      }
+      if (generated) {
+        return (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-center">
+            <i className="fas fa-check-circle text-green-500 text-2xl mb-2"></i>
+            <p className="text-sm text-green-700 font-medium">Landing文件已生成！</p>
+            <p className="text-xs text-gray-500 mt-1">请将文件发送给新人：{newbieInfo.name}</p>
+          </div>
+        );
+      }
+      return (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-center">
+          <i className="fas fa-file-code text-blue-500 text-2xl mb-2"></i>
+          <p className="text-sm text-blue-700 font-medium">所有配置已完成，可以生成Landing文件</p>
+          <button onClick={() => { setGenerated(true); onGenerate(); }} className="btn-primary px-6 py-2 rounded-lg text-sm font-medium mt-2"><i className="fas fa-magic mr-1"></i> 生成Landing文件</button>
+        </div>
+      );
+    }
+
+    // ========== 主应用 ==========
+    function App() {
+      const [currentRole, setCurrentRole] = useState('manager');
+      const [deptConfig, setDeptConfig] = useState(INITIAL_DEPT_CONFIG);
+      const [deptSubmitted, setDeptSubmitted] = useState(true);
+      const [archiveConfig, setArchiveConfig] = useState(INITIAL_ARCHIVE_CONFIG);
+      const [archiveSubmitted, setArchiveSubmitted] = useState(true);
+      const [modules, setModules] = useState(INITIAL_MODULES);
+      const [modulesSubmitted, setModulesSubmitted] = useState(true);
+      const [taskStatuses, setTaskStatuses] = useState({});
+      const [notification, setNotification] = useState(null);
+      const [landingGenerated, setLandingGenerated] = useState(false);
+
+      const showNotification = (message, type = 'info') => setNotification({ message, type });
+
+      const generateTasks = () => {
+        const tasks = [];
+        if (currentRole === 'manager') {
+          tasks.push(
+            { id: 'mgr-000', role: 'manager', phase: 'pre', title: '填写部门学习资料', description: '配置部门名称、知识库链接、核心指标、看板链接', type: 'config', priority: 'high', estimatedTime: '10分钟', deliverable: '部门学习资料配置', status: deptSubmitted ? 'done' : 'pending' },
+            { id: 'mgr-001', role: 'manager', phase: 'pre', title: '配置归档路径', description: '设置新人文件自动归档的文件夹路径、Q&A文件夹、交付物文件夹', type: 'config', priority: 'high', estimatedTime: '5分钟', deliverable: '归档路径配置', status: archiveSubmitted ? 'done' : 'pending' },
+            { id: 'mgr-002', role: 'manager', phase: 'pre', title: '配置业务模块及Owner', description: '添加部门内的业务模块，指定各模块Owner', type: 'config', priority: 'high', estimatedTime: '10分钟', deliverable: '模块配置清单', status: modulesSubmitted ? 'done' : 'pending' },
+            { id: 'mgr-003', role: 'manager', phase: 'pre', title: '指定师兄/导师', description: `为新人 ${NEWBIE_INFO.name} 指定师兄：${NEWBIE_INFO.mentor}`, type: 'action', priority: 'high', estimatedTime: '2分钟', deliverable: '', status: 'done' },
+            { id: 'mgr-004', role: 'manager', phase: 'pre', title: '生成Landing文件', description: '完成所有配置后，生成新人使用的Landing系统文件', type: 'generate', priority: 'high', estimatedTime: '1分钟', deliverable: 'Landing HTML文件', status: landingGenerated ? 'done' : 'pending' },
+            { id: 'mgr-005', role: 'manager', phase: 'phase1', title: '查收第一阶段交付物', description: '审核新人提交的AE组织架构图学习笔记（重点检查是否了解供应链在AE组织中的位置及跨团队协同关系）和部门知识库学习总结', type: 'review', priority: 'medium', estimatedTime: '30分钟', deliverable: '组织架构图学习笔记、部门知识库学习总结', status: taskStatuses['mgr-005'] || 'pending' },
+            { id: 'mgr-006', role: 'manager', phase: 'phase2', title: '1V1对齐OKR', description: '与新人进行1对1沟通，对齐实习期OKR目标', type: 'action', priority: 'high', estimatedTime: '60分钟', deliverable: '实习期目标设定', status: taskStatuses['mgr-006'] || 'pending' },
+            { id: 'mgr-007', role: 'manager', phase: 'phase2', title: '查收第二阶段交付物', description: '审核各模块业务学习报告和实习期目标设定', type: 'review', priority: 'medium', estimatedTime: '30分钟', deliverable: '各模块业务学习报告、实习期目标设定', status: taskStatuses['mgr-007'] || 'pending' },
+            { id: 'mgr-008', role: 'manager', phase: 'phase3', title: '确定新人业务方向', description: '第5周与新人沟通，确定后续业务深耕方向', type: 'action', priority: 'high', estimatedTime: '30分钟', deliverable: '', status: taskStatuses['mgr-008'] || 'pending' },
+            { id: 'mgr-009', role: 'manager', phase: 'phase3', title: '沟通转正事项', description: '第8周与新人沟通转正答辩准备事项', type: 'action', priority: 'high', estimatedTime: '30分钟', deliverable: '转正答辩PPT', status: taskStatuses['mgr-009'] || 'pending' },
+            { id: 'mgr-010', role: 'manager', phase: 'phase3', title: '查收第三阶段交付物', description: '审核业务参与实践报告和转正答辩PPT', type: 'review', priority: 'medium', estimatedTime: '45分钟', deliverable: '业务参与实践报告、转正答辩PPT', status: taskStatuses['mgr-010'] || 'pending' },
+            { id: 'mgr-011', role: 'manager', phase: 'phase4', title: '组织转正答辩', description: '第12周组织转正答辩会', type: 'action', priority: 'high', estimatedTime: '90分钟', deliverable: '转正答辩记录', status: taskStatuses['mgr-011'] || 'pending' }
+          );
+        } else {
+          modules.forEach((m, idx) => {
+            tasks.push({
+              id: `owner-${m.id}`, role: 'owner', phase: 'pre', title: `填写「${m.name}」模块资料`, description: `为模块「${m.name}」填写知识库、核心指标、看板链接和题目库`, type: 'owner-task', priority: 'high', estimatedTime: '15分钟', deliverable: '模块学习资料及题目库', status: m.status === 'completed' ? 'done' : 'pending'
+            });
+          });
+          tasks.push(
+            { id: 'owner-qa-001', role: 'owner', phase: 'all', title: '回答新人Q&A', description: '回答新人针对模块提出的问题', type: 'reactive', priority: 'medium', estimatedTime: '10分钟', deliverable: '', status: 'pending' },
+            { id: 'owner-qa-002', role: 'owner', phase: 'all', title: '模块讲解邀约', description: '应新人邀请进行模块知识讲解', type: 'reactive', priority: 'medium', estimatedTime: '30分钟', deliverable: '', status: 'pending' }
+          );
+        }
+        return tasks.map(t => ({ ...t, status: taskStatuses[t.id] || t.status }));
+      };
+
+      const tasks = generateTasks();
+      const canGenerateLanding = deptSubmitted && archiveSubmitted && modulesSubmitted;
+      const ownerPendingCount = modules.filter(m => m.status !== 'completed').length;
+
+      const toggleTask = (id) => {
+        const current = taskStatuses[id] || tasks.find(t => t.id === id)?.status || 'pending';
+        const next = current === 'done' ? 'pending' : 'done';
+        setTaskStatuses({ ...taskStatuses, [id]: next });
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+
+          {/* Header */}
+          <div className="gradient-bg text-white">
+            <div className="max-w-5xl mx-auto px-4 py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-bold">新人入职Landing系统</h1>
+                  <p className="text-sm text-blue-100 mt-1">{INITIAL_DEPT_CONFIG.deptName} · 主管配置端</p>
+                </div>
+                <div className="text-right text-sm text-blue-100">
+                  <div>新人：{NEWBIE_INFO.name}</div>
+                  <div>入职日期：{NEWBIE_INFO.joinDate}</div>
+                  <div>师兄：{NEWBIE_INFO.mentor}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-5xl mx-auto px-4 py-6">
+            <div className="flex items-center justify-between mb-4">
+              <RoleSwitcher currentRole={currentRole} onSwitch={setCurrentRole} ownerPendingCount={ownerPendingCount} />
+              <div className="text-sm text-gray-500">
+                {currentRole === 'manager' ? ROLES.manager.desc : ROLES.owner.desc}
+              </div>
+            </div>
+
+            {currentRole === 'manager' && (
+              <>
+                <StatsPanel tasks={tasks} />
+                <LandingGenerator canGenerate={canGenerateLanding} newbieInfo={NEWBIE_INFO} onGenerate={() => { setLandingGenerated(true); showNotification('Landing文件生成成功！', 'success'); }} />
+                <NewbieProgressPanel data={NEWBIE_PROGRESS_DATA} />
+
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">配置管理</h2>
+                  <DepartmentConfigForm config={deptConfig} submitted={deptSubmitted} onSubmit={(data) => { setDeptConfig(data); setDeptSubmitted(true); showNotification('部门资料已保存', 'success'); }} />
+                  <ArchivePathConfigForm config={archiveConfig} submitted={archiveSubmitted} onSubmit={(data) => { setArchiveConfig(data); setArchiveSubmitted(true); showNotification('归档路径已保存', 'success'); }} />
+                  <ModuleConfigForm modules={modules} submitted={modulesSubmitted} onSubmit={(data) => { setModules(data); setModulesSubmitted(true); showNotification('模块配置已保存', 'success'); }} />
+                </div>
+
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">任务列表</h2>
+                  {PHASES.map(phase => {
+                    const phaseTasks = tasks.filter(t => t.phase === phase.id || (phase.id === 'all' && t.phase === 'all'));
+                    if (phaseTasks.length === 0) return null;
+                    return (
+                      <div key={phase.id} className="mb-4">
+                        <div className="phase-header" style={{ borderColor: phase.color }}>
+                          <h3 className="font-semibold text-gray-800">{phase.name}</h3>
+                          <p className="text-xs text-gray-500">{phase.desc}</p>
+                        </div>
+                        {phaseTasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {currentRole === 'owner' && (
+              <>
+                <StatsPanel tasks={tasks} />
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">模块资料填写</h2>
+                  <OwnerModuleForm modules={modules} onUpdate={(updated) => { setModules(updated); showNotification('模块资料已更新', 'success'); }} />
+                </div>
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">任务列表</h2>
+                  {tasks.map(task => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
