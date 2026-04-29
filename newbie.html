@@ -619,6 +619,52 @@
         showNotification('问题已提交', 'success');
       };
 
+      // 导出进度
+      const handleExportProgress = () => {
+        const data = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          currentPhase,
+          taskCompletes,
+          moduleStatus,
+          phasesProgress,
+          deliverables,
+          qaList
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `新人入职进度-${NEWBIE_INFO.name}-${new Date().toLocaleDateString('zh-CN')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification('进度已导出，请妥善保存文件', 'success');
+      };
+
+      // 导入进度
+      const fileInputRef = React.useRef(null);
+      const handleImportProgress = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.taskCompletes) setTaskCompletes(data.taskCompletes);
+            if (data.moduleStatus) setModuleStatus(data.moduleStatus);
+            if (data.deliverables) setDeliverables(data.deliverables);
+            if (data.qaList) setQaList(data.qaList);
+            if (data.currentPhase) setCurrentPhase(data.currentPhase);
+            if (data.phasesProgress) setPhasesProgress(data.phasesProgress);
+            showNotification('进度已恢复', 'success');
+          } catch (err) {
+            showNotification('文件格式错误，无法导入', 'error');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
       function getAllTasks() {
         return [
           ...getTasksForPhase('phase1', MODULES),
@@ -673,6 +719,11 @@
                 <div className="text-right text-sm text-blue-100">
                   <div>{NEWBIE_INFO.name} · 第 {NEWBIE_INFO.dayCount} 天</div>
                   <div>师兄：{NEWBIE_INFO.mentor}</div>
+                  <div className="mt-2 flex gap-2 justify-end">
+                    <input type="file" accept=".json" ref={fileInputRef} onChange={handleImportProgress} style={{ display: 'none' }} />
+                    <button onClick={() => fileInputRef.current?.click()} className="text-xs px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-white"><i className="fas fa-upload mr-1"></i>导入进度</button>
+                    <button onClick={handleExportProgress} className="text-xs px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-white"><i className="fas fa-download mr-1"></i>导出进度</button>
+                  </div>
                 </div>
               </div>
             </div>
