@@ -163,36 +163,62 @@
     }
 
     // ========== 学习任务列表 ==========
-    function TaskList({ phase, modules, moduleStatus, onModuleToggle, onOpenAgent }) {
+    function TaskList({ phase, modules, moduleStatus, onModuleToggle, onOpenAgent, taskCompletes, onTaskComplete, deliverables, onDeliverableSubmit }) {
       const tasks = getTasksForPhase(phase, modules);
       return (
         <div className="space-y-3">
-          {tasks.map((task, idx) => (
-            <div key={idx} className="bg-white rounded-lg p-4 card-shadow">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5"><div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{idx + 1}</div></div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-800">{task.title}</h4>
-                  <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-                  {task.links && task.links.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {task.links.map((link, li) => (
-                        <a key={li} href={link.url} target="_blank" className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200"><i className="fas fa-external-link-alt mr-1"></i>{link.name}</a>
-                      ))}
-                    </div>
-                  )}
-                  {task.action && (
-                    <button onClick={() => onOpenAgent(task.action, task)} className="agent-btn mt-2 text-xs px-4 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700">
-                      <i className="fas fa-robot mr-1"></i>{task.actionLabel || '打开Agent'}
+          {tasks.map((task, idx) => {
+            const isCompleted = !!taskCompletes[task.title];
+            const relatedDel = deliverables.find(d => d.name === task.deliverable);
+            return (
+              <div key={idx} className={`bg-white rounded-lg p-4 card-shadow ${isCompleted ? 'border-l-4 border-green-400' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">
+                    <button
+                      onClick={() => onTaskComplete(task.title, !isCompleted)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isCompleted ? 'bg-green-500 text-white' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'}`}
+                    >
+                      {isCompleted ? <i className="fas fa-check"></i> : idx + 1}
                     </button>
-                  )}
-                  {task.deliverable && (
-                    <div className="mt-2 text-xs text-amber-600"><i className="fas fa-file-alt mr-1"></i>交付物：{task.deliverable}</div>
-                  )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`font-medium ${isCompleted ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{task.title}</h4>
+                      {isCompleted && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已完成</span>}
+                    </div>
+                    <p className={`text-sm mt-1 ${isCompleted ? 'text-gray-300' : 'text-gray-500'}`}>{task.description}</p>
+                    {task.links && task.links.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {task.links.map((link, li) => (
+                          <a key={li} href={link.url} target="_blank" className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200"><i className="fas fa-external-link-alt mr-1"></i>{link.name}</a>
+                        ))}
+                      </div>
+                    )}
+                    {task.action && (
+                      <button onClick={() => onOpenAgent(task.action, task)} className="agent-btn mt-2 text-xs px-4 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+                        <i className="fas fa-robot mr-1"></i>{task.actionLabel || '打开Agent'}
+                      </button>
+                    )}
+                    {task.deliverable && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-amber-600"><i className="fas fa-file-alt mr-1"></i>交付物：{task.deliverable}</span>
+                        {relatedDel && relatedDel.status === 'completed' ? (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已提交</span>
+                        ) : (
+                          <button
+                            onClick={() => onOpenAgent('deliverable', { deliverable: task.deliverable })}
+                            className="text-xs px-3 py-1 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200"
+                          >
+                            <i className="fas fa-upload mr-1"></i>提交
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {phase === 'phase2' && (
             <div className="bg-white rounded-lg p-4 card-shadow">
@@ -359,8 +385,33 @@
       );
     }
 
+    // ========== 交付物提交表单 ==========
+    function DeliverableForm({ data, onSubmit, onClose }) {
+      const [docUrl, setDocUrl] = useState('');
+      const handleSubmit = () => {
+        if (!docUrl.trim()) { alert('请输入钉钉文档链接'); return; }
+        onSubmit(data?.deliverable || '', docUrl);
+        onClose();
+      };
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm text-gray-600">交付物名称</label>
+            <input className="w-full text-sm mt-1 bg-gray-50" value={data?.deliverable || ''} readOnly />
+          </div>
+          <div>
+            <label className="text-sm text-gray-600">钉钉文档链接 <span className="text-red-500">*</span></label>
+            <input className="w-full text-sm mt-1" placeholder="粘贴 alidocs 链接..." value={docUrl} onChange={e => setDocUrl(e.target.value)} />
+          </div>
+          <button onClick={handleSubmit} className="w-full bg-green-600 text-white py-2 rounded-lg text-sm hover:bg-green-700">
+            <i className="fas fa-check mr-1"></i>确认提交
+          </button>
+        </div>
+      );
+    }
+
     // ========== Agent弹窗 ==========
-    function AgentModal({ type, data, onClose }) {
+    function AgentModal({ type, data, onClose, onSubmit }) {
       const contents = {
         orgChart: { title: 'AE组织架构图', icon: 'fa-sitemap', content: (
           <div className="space-y-3 text-sm max-h-96 overflow-y-auto">
@@ -448,11 +499,7 @@
         )},
         okr: { title: 'OKR系统', icon: 'fa-bullseye', content: <div className="text-center py-6 text-gray-500">OKR系统入口<br/>请通过内部系统访问OKR进行目标设定</div> },
         deliverable: { title: '提交交付物', icon: 'fa-file-upload', content: (
-          <div className="space-y-3">
-            <div><label className="text-sm text-gray-600">交付物名称</label><input className="w-full text-sm mt-1" value={data?.deliverable || ''} readOnly /></div>
-            <div><label className="text-sm text-gray-600">钉钉文档链接</label><input className="w-full text-sm mt-1" placeholder="粘贴alidocs链接..." /></div>
-            <button className="w-full bg-green-600 text-white py-2 rounded-lg text-sm hover:bg-green-700">提交交付物</button>
-          </div>
+          <DeliverableForm data={data} onSubmit={onSubmit} onClose={onClose} />
         )}
       };
       const c = contents[type] || { title: 'Agent', icon: 'fa-robot', content: <div className="text-center py-6 text-gray-500">功能开发中</div> };
@@ -477,30 +524,95 @@
       const [qaList, setQaList] = useState([]);
       const [modal, setModal] = useState(null);
       const [notification, setNotification] = useState(null);
+      const [taskCompletes, setTaskCompletes] = useState({});
       const [deliverables, setDeliverables] = useState([
-        { phase: '第一阶段', name: '组织架构图学习笔记', status: 'pending', date: '待开始' },
-        { phase: '第一阶段', name: '部门知识库学习总结', status: 'pending', date: '待开始' },
-        { phase: '第二阶段', name: '各模块业务学习报告', status: 'pending', date: '待开始' },
-        { phase: '第二阶段', name: '实习期目标设定', status: 'pending', date: '待开始' },
-        { phase: '第三阶段', name: '业务参与实践报告', status: 'pending', date: '待开始' },
-        { phase: '第三阶段', name: '转正答辩PPT', status: 'pending', date: '待开始' },
-        { phase: '第四阶段', name: '转正答辩记录', status: 'pending', date: '待开始' }
+        { phase: '第一阶段', name: '组织架构图学习笔记', status: 'pending', date: '待开始', docUrl: '' },
+        { phase: '第一阶段', name: '部门知识库学习总结', status: 'pending', date: '待开始', docUrl: '' },
+        { phase: '第一阶段', name: '各模块业务学习报告', status: 'pending', date: '待开始', docUrl: '' },
+        { phase: '第二阶段', name: '实习期目标设定', status: 'pending', date: '待开始', docUrl: '' },
+        { phase: '第三阶段', name: '业务参与实践报告', status: 'pending', date: '待开始', docUrl: '' },
+        { phase: '第三阶段', name: '转正答辩PPT', status: 'pending', date: '待开始', docUrl: '' },
+        { phase: '第四阶段', name: '转正答辩记录', status: 'pending', date: '待开始', docUrl: '' }
       ]);
 
       const showNotification = (message, type = 'info') => setNotification({ message, type });
 
+      // 计算阶段进度：任务完成(50%) + 模块学习(30%) + 交付物提交(20%)
+      const calculatePhaseProgress = (phaseId, tasks, modulesDone, dels) => {
+        const phaseTasks = tasks.filter(t => t.phase === phaseId);
+        const taskDone = phaseTasks.filter(t => taskCompletes[t.title]).length;
+        const taskRate = phaseTasks.length > 0 ? taskDone / phaseTasks.length : 0;
+
+        const moduleRate = phaseId === 'phase1' ? modulesDone / MODULES.length : 0;
+
+        const phaseDels = dels.filter(d => {
+          const pMap = { 'phase1': '第一阶段', 'phase2': '第二阶段', 'phase3': '第三阶段', 'phase4': '第四阶段' };
+          return d.phase === pMap[phaseId];
+        });
+        const delDone = phaseDels.filter(d => d.status === 'completed').length;
+        const delRate = phaseDels.length > 0 ? delDone / phaseDels.length : 0;
+
+        if (phaseId === 'phase1') {
+          return Math.min(100, Math.round(taskRate * 50 + moduleRate * 30 + delRate * 20));
+        }
+        return Math.min(100, Math.round(taskRate * 70 + delRate * 30));
+      };
+
       const handleModuleToggle = (moduleId, checked) => {
-        setModuleStatus({ ...moduleStatus, [moduleId]: checked });
-        const completedCount = Object.values({ ...moduleStatus, [moduleId]: checked }).filter(Boolean).length;
-        const total = MODULES.length;
-        const mastery = Math.round((completedCount / total) * 100);
-        setPhasesProgress(prev => ({ ...prev, [currentPhase]: Math.min(100, mastery) }));
+        const nextStatus = { ...moduleStatus, [moduleId]: checked };
+        setModuleStatus(nextStatus);
+        const modulesDone = Object.values(nextStatus).filter(Boolean).length;
+        const allTasks = getAllTasks();
+        setPhasesProgress(prev => ({
+          ...prev,
+          phase1: calculatePhaseProgress('phase1', allTasks, modulesDone, deliverables)
+        }));
+      };
+
+      const handleTaskComplete = (taskTitle, completed) => {
+        const nextCompletes = { ...taskCompletes, [taskTitle]: completed };
+        setTaskCompletes(nextCompletes);
+        const modulesDone = Object.values(moduleStatus).filter(Boolean).length;
+        const allTasks = getAllTasks();
+        const newProgress = {};
+        PHASES.forEach(p => {
+          newProgress[p.id] = calculatePhaseProgress(p.id, allTasks, modulesDone, deliverables);
+        });
+        setPhasesProgress(newProgress);
+        showNotification(completed ? '任务已完成' : '任务已取消完成', 'success');
+      };
+
+      const handleDeliverableSubmit = (deliverableName, docUrl) => {
+        const nextDeliverables = deliverables.map(d => {
+          if (d.name === deliverableName) {
+            return { ...d, status: 'completed', date: new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }), docUrl };
+          }
+          return d;
+        });
+        setDeliverables(nextDeliverables);
+        const modulesDone = Object.values(moduleStatus).filter(Boolean).length;
+        const allTasks = getAllTasks();
+        const newProgress = {};
+        PHASES.forEach(p => {
+          newProgress[p.id] = calculatePhaseProgress(p.id, allTasks, modulesDone, nextDeliverables);
+        });
+        setPhasesProgress(newProgress);
+        showNotification('交付物已提交', 'success');
       };
 
       const handleAddQA = (qa) => {
         setQaList([...qaList, qa]);
         showNotification('问题已提交', 'success');
       };
+
+      function getAllTasks() {
+        return [
+          ...getTasksForPhase('phase1', MODULES),
+          ...getTasksForPhase('phase2', MODULES),
+          ...getTasksForPhase('phase3', MODULES),
+          ...getTasksForPhase('phase4', MODULES)
+        ].map(t => ({ ...t, phase: t.phase || 'phase1' }));
+      }
 
       const progressData = {
         overallProgress: Math.round(Object.values(phasesProgress).reduce((a, b) => a + b, 0) / 4),
@@ -527,7 +639,14 @@
       return (
         <div className="min-h-screen bg-gray-50">
           {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-          {modal && <AgentModal type={modal.type} data={modal.data} onClose={() => setModal(null)} />}
+          {modal && (
+            <AgentModal
+              type={modal.type}
+              data={modal.data}
+              onClose={() => setModal(null)}
+              onSubmit={modal.type === 'deliverable' ? handleDeliverableSubmit : null}
+            />
+          )}
 
           {/* Header */}
           <div className="gradient-bg text-white">
@@ -566,6 +685,10 @@
                 moduleStatus={moduleStatus}
                 onModuleToggle={handleModuleToggle}
                 onOpenAgent={(type, data) => setModal({ type, data })}
+                taskCompletes={taskCompletes}
+                onTaskComplete={handleTaskComplete}
+                deliverables={deliverables}
+                onDeliverableSubmit={handleDeliverableSubmit}
               />
             </div>
 
