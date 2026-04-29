@@ -44,7 +44,7 @@
 
     // ========== 常量定义 ==========
     const PHASES = [
-      { id: 'phase1', name: '第一阶段', subtitle: '新人初期', week: '第1周', desc: '融入团队，了解组织架构，学习部门核心工作', color: '#10b981', unlockThreshold: 0 },
+      { id: 'phase1', name: '第一阶段', subtitle: '新人初期', week: '第1-2周', desc: '融入团队，了解组织架构，学习本部门及各模块资料，完成模块学习标记与Owner自测', color: '#10b981', unlockThreshold: 0 },
       { id: 'phase2', name: '第二阶段', subtitle: '进阶期', week: '第3-4周', desc: '掌握业务全链路逻辑，对齐OKR目标', color: '#f59e0b', unlockThreshold: 70 },
       { id: 'phase3', name: '第三阶段', subtitle: '养成期', week: '第5-8周', desc: '初步参与核心业务，确定业务方向，准备转正', color: '#8b5cf6', unlockThreshold: 80 },
       { id: 'phase4', name: '第四阶段', subtitle: '转正期', week: '第9-12周', desc: '深度参与业务，完成转正答辩', color: '#ec4899', unlockThreshold: 90 }
@@ -208,11 +208,11 @@
             </div>
           )}
 
-          {phase !== 'phase1' && (
+          {phase === 'phase1' && (
             <div className="bg-white rounded-lg p-4 card-shadow">
-              <h4 className="font-semibold text-gray-800 mb-3">模块学习</h4>
+              <h4 className="font-semibold text-gray-800 mb-3">模块学习 <span className="text-xs text-gray-400 font-normal">（逐一学习并标记完成）</span></h4>
               {modules.map(m => (
-                <ModuleCard key={m.id} module={m} onToggle={onModuleToggle} disabled={phase === 'phase1'} />
+                <ModuleCard key={m.id} module={m} onToggle={onModuleToggle} disabled={false} />
               ))}
             </div>
           )}
@@ -223,15 +223,17 @@
     function getTasksForPhase(phaseId, modules) {
       const baseTasks = {
         phase1: [
+          { title: '认识师兄', description: `添加师兄 ${DEPT_INFO.mentor} 的钉钉，建立日常沟通渠道，了解团队基本情况和注意事项`, action: 'chat', actionLabel: '联系师兄', deliverable: '' },
+          { title: '加入部门钉钉群', description: '加入部门核心钉钉群，了解团队日常沟通方式和信息同步渠道', action: 'join', actionLabel: '加入群聊', deliverable: '' },
           { title: '了解组织架构', description: '查看AE整体组织架构图，重点了解「供应链」在AE组织中的位置，以及本部门（供应链商家规则&体验）与周边团队（商品供应链、供应链网络、品仓解决方案、计划供应链等）的协同关系', links: [{ name: '组织架构图', url: '#' }], action: 'orgChart', actionLabel: '查看架构', deliverable: '组织架构图学习笔记' },
           { title: '学习部门知识库', description: '阅读部门知识库文档，了解部门核心职责、业务范围和工作流程', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '部门知识库学习总结' },
           { title: '了解核心指标', description: '学习部门核心指标定义、计算口径和当前表现', links: [{ name: '数据看板', url: DEPT_INFO.dashboard }], deliverable: '' },
-          { title: '认识团队成员', description: '与团队成员逐一认识，了解各自负责的业务领域', action: 'chat', actionLabel: '发起聊天', deliverable: '' },
-          { title: '与师兄对接', description: `添加师兄 ${DEPT_INFO.mentor} 的钉钉，建立日常沟通渠道`, action: 'chat', actionLabel: '联系师兄', deliverable: '' }
+          { title: '学习业务全链路', description: '深入了解供应链商家规则&体验的全链路业务流程，理解各模块之间的协作关系', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '各模块业务学习报告' },
+          { title: '学习各模块业务', description: '逐一学习各业务模块的知识库、核心指标和看板，完成模块学习标记', links: modules.filter(m => m.knowledgeBase && m.knowledgeBase !== '/').map(m => ({ name: m.name, url: m.knowledgeBase })), deliverable: '' },
+          { title: '完成Owner自测题目', description: '完成各模块Owner提供的自测题目，检验对模块知识的掌握程度', deliverable: '' },
+          { title: '认识团队成员', description: '与团队成员逐一认识，了解各自负责的业务领域', action: 'chat', actionLabel: '发起聊天', deliverable: '' }
         ],
         phase2: [
-          { title: '学习业务全链路', description: '深入了解供应链商家规则&体验的全链路业务流程', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '各模块业务学习报告' },
-          { title: '学习各模块业务', description: '逐一学习各业务模块的知识库、核心指标和看板', links: modules.filter(m => m.knowledgeBase).map(m => ({ name: m.name, url: m.knowledgeBase })), deliverable: '' },
           { title: '1V1对齐OKR', description: '与主管进行1对1沟通，对齐实习期的OKR目标', action: 'okr', actionLabel: '查看OKR系统', deliverable: '实习期目标设定' },
           { title: '模拟商家后台操作', description: '在测试环境模拟商家后台操作，熟悉系统功能', action: 'merchantPortal', actionLabel: '打开商家后台', deliverable: '' },
           { title: '走访商家与仓库', description: '实地走访商家或仓库，了解一线业务场景', action: 'visit', actionLabel: '登记走访', deliverable: '走仓心得、访商记录' }
@@ -434,6 +436,7 @@
           </div>
         )},
         chat: { title: '发起聊天', icon: 'fa-comment-dots', content: <div className="text-center py-6 text-gray-500">请在钉钉中搜索对应同事发起聊天</div> },
+        join: { title: '加入钉钉群', icon: 'fa-users', content: <div className="text-center py-6 text-gray-500">请在钉钉中搜索部门群组并申请加入<br/>或联系师兄/主管邀请入群</div> },
         merchantPortal: { title: '商家后台模拟', icon: 'fa-store', content: <div className="text-center py-6 text-gray-500">商家后台模拟环境入口<br/>请联系IT或师兄获取测试账号</div> },
         visit: { title: '走访登记', icon: 'fa-walking', content: (
           <div className="space-y-3">

@@ -44,7 +44,7 @@
 
     const PHASES = [
       { id: 'pre', name: '入职前准备阶段', week: '入职前', desc: '主管配置部门、归档路径及业务模块资料', color: '#3b82f6' },
-      { id: 'phase1', name: '第一阶段（新人初期）', week: '第1周', deliverable: '第1周最后工作日', desc: '融入团队，了解组织架构，学习部门核心工作', color: '#10b981' },
+      { id: 'phase1', name: '第一阶段（新人初期）', week: '第1-2周', deliverable: '第2周最后工作日', desc: '融入团队，了解组织架构，学习本部门及各模块资料，完成模块学习标记与Owner自测', color: '#10b981' },
       { id: 'phase2', name: '第二阶段（3-4周）', week: '第2-4周', deliverable: '第4周最后工作日', desc: '掌握业务全链路逻辑，对齐OKR目标', color: '#f59e0b' },
       { id: 'phase3', name: '第三阶段（5-8周）', week: '第5-8周', deliverable: '第8周最后工作日', desc: '初步参与核心业务，确定业务方向，准备转正', color: '#8b5cf6' },
       { id: 'phase4', name: '第四阶段（9-12周）', week: '第9-12周', deliverable: '第12周转正答辩', desc: '深度参与业务，完成转正答辩', color: '#ec4899' }
@@ -610,7 +610,7 @@
             { id: 'mgr-002', role: 'manager', phase: 'pre', title: '配置业务模块及Owner', description: '添加部门内的业务模块，指定各模块Owner', type: 'config', priority: 'high', estimatedTime: '10分钟', deliverable: '模块配置清单', status: modulesSubmitted ? 'done' : 'pending' },
             { id: 'mgr-003', role: 'manager', phase: 'pre', title: '指定师兄/导师', description: `为新人 ${NEWBIE_INFO.name} 指定师兄：${NEWBIE_INFO.mentor}`, type: 'action', priority: 'high', estimatedTime: '2分钟', deliverable: '', status: 'done' },
             { id: 'mgr-004', role: 'manager', phase: 'pre', title: '生成Landing文件', description: '完成所有配置后，生成新人使用的Landing系统文件', type: 'generate', priority: 'high', estimatedTime: '1分钟', deliverable: 'Landing HTML文件', status: landingGenerated ? 'done' : 'pending' },
-            { id: 'mgr-005', role: 'manager', phase: 'phase1', title: '查收第一阶段交付物', description: '审核新人提交的AE组织架构图学习笔记（重点检查是否了解供应链在AE组织中的位置及跨团队协同关系）和部门知识库学习总结', type: 'review', priority: 'medium', estimatedTime: '30分钟', deliverable: '组织架构图学习笔记、部门知识库学习总结', status: taskStatuses['mgr-005'] || 'pending' },
+            { id: 'mgr-005', role: 'manager', phase: 'phase1', title: '查收第一阶段交付物', description: '审核新人提交的AE组织架构图学习笔记（重点检查是否了解供应链在AE组织中的位置及跨团队协同关系）、部门知识库学习总结、各模块业务学习报告及Owner自测完成情况', type: 'review', priority: 'medium', estimatedTime: '45分钟', deliverable: '组织架构图学习笔记、部门知识库学习总结、各模块业务学习报告', status: taskStatuses['mgr-005'] || 'pending' },
             { id: 'mgr-006', role: 'manager', phase: 'phase2', title: '1V1对齐OKR', description: '与新人进行1对1沟通，对齐实习期OKR目标', type: 'action', priority: 'high', estimatedTime: '60分钟', deliverable: '实习期目标设定', status: taskStatuses['mgr-006'] || 'pending' },
             { id: 'mgr-007', role: 'manager', phase: 'phase2', title: '查收第二阶段交付物', description: '审核各模块业务学习报告和实习期目标设定', type: 'review', priority: 'medium', estimatedTime: '30分钟', deliverable: '各模块业务学习报告、实习期目标设定', status: taskStatuses['mgr-007'] || 'pending' },
             { id: 'mgr-008', role: 'manager', phase: 'phase3', title: '确定新人业务方向', description: '第5周与新人沟通，确定后续业务深耕方向', type: 'action', priority: 'high', estimatedTime: '30分钟', deliverable: '', status: taskStatuses['mgr-008'] || 'pending' },
