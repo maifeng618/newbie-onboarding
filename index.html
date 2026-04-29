@@ -668,22 +668,40 @@
       const showNotification = (message, type = 'info') => setNotification({ message, type });
 
       const fileInputRef = React.useRef(null);
+      const [importMode, setImportMode] = useState(false);
+      const [pastedJson, setPastedJson] = useState('');
+
+      const parseAndLoadNewbieData = (raw) => {
+        try {
+          const data = JSON.parse(raw);
+          if (!data.version) { showNotification('文件格式不正确，缺少 version 字段', 'error'); return false; }
+          if (!data.deliverables || !Array.isArray(data.deliverables)) { showNotification('文件格式不正确，缺少 deliverables', 'error'); return false; }
+          setNewbieData(data);
+          setImportMode(false);
+          setPastedJson('');
+          showNotification('已加载新人进度数据', 'success');
+          return true;
+        } catch (err) {
+          showNotification('JSON 解析失败，请检查内容格式', 'error');
+          return false;
+        }
+      };
+
       const handleImportNewbieData = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (event) => {
-          try {
-            const data = JSON.parse(event.target.result);
-            if (!data.version) { showNotification('文件格式不正确', 'error'); return; }
-            setNewbieData(data);
-            showNotification('已加载新人进度数据', 'success');
-          } catch (err) {
-            showNotification('文件解析失败', 'error');
-          }
+          parseAndLoadNewbieData(event.target.result);
         };
+        reader.onerror = () => showNotification('文件读取失败', 'error');
         reader.readAsText(file);
         e.target.value = '';
+      };
+
+      const handlePasteImport = () => {
+        if (!pastedJson.trim()) { showNotification('请先粘贴 JSON 内容', 'warning'); return; }
+        parseAndLoadNewbieData(pastedJson);
       };
 
       const generateTasks = () => {
@@ -764,11 +782,31 @@
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-semibold text-gray-800">新人进展与交付物</h2>
                   <div className="flex gap-2">
-                    <input type="file" accept=".json" ref={fileInputRef} onChange={handleImportNewbieData} style={{ display: 'none' }} />
-                    <button onClick={() => fileInputRef.current?.click()} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700"><i className="fas fa-upload mr-1"></i>导入新人进度</button>
                     {newbieData && <button onClick={() => setNewbieData(null)} className="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300"><i className="fas fa-trash mr-1"></i>清除数据</button>}
+                    <button onClick={() => setImportMode(!importMode)} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700"><i className="fas fa-upload mr-1"></i>导入新人进度</button>
                   </div>
                 </div>
+
+                {importMode && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <button onClick={() => fileInputRef.current?.click()} className="text-xs px-3 py-1.5 bg-white text-blue-700 border border-blue-300 rounded-full hover:bg-blue-100"><i className="fas fa-file-import mr-1"></i>选择 JSON 文件</button>
+                      <input type="file" accept=".json" ref={fileInputRef} onChange={handleImportNewbieData} style={{ display: 'none' }} />
+                      <span className="text-xs text-gray-500">或直接把 JSON 内容粘贴到下方</span>
+                    </div>
+                    <textarea
+                      value={pastedJson}
+                      onChange={e => setPastedJson(e.target.value)}
+                      placeholder="把新人导出的 JSON 内容粘贴到这里..."
+                      rows="4"
+                      className="w-full text-xs mb-2"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={handlePasteImport} className="text-xs px-4 py-1.5 bg-green-600 text-white rounded-full hover:bg-green-700"><i className="fas fa-check mr-1"></i>确认导入</button>
+                      <button onClick={() => { setImportMode(false); setPastedJson(''); }} className="text-xs px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300">取消</button>
+                    </div>
+                  </div>
+                )}
                 <NewbieProgressPanel data={newbieData ? {
                   overallProgress: Math.round(Object.values(newbieData.phasesProgress || {}).reduce((a,b)=>a+b,0)/4),
                   teamIntegration: Math.min(100, Math.round(((newbieData.phasesProgress?.phase1||0)*0.8 + (newbieData.phasesProgress?.phase2||0)*0.2))),
