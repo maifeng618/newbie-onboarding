@@ -252,12 +252,8 @@
           { title: '认识师兄', description: `添加师兄 ${DEPT_INFO.mentor} 的钉钉，建立日常沟通渠道，了解团队基本情况和注意事项`, action: 'chat', actionLabel: '联系师兄', deliverable: '' },
           { title: '加入部门钉钉群', description: '加入部门核心钉钉群，了解团队日常沟通方式和信息同步渠道', action: 'join', actionLabel: '加入群聊', deliverable: '' },
           { title: '了解组织架构', description: '查看AE整体组织架构图，重点了解「供应链」在AE组织中的位置，以及本部门（供应链商家规则&体验）与周边团队（商品供应链、供应链网络、品仓解决方案、计划供应链等）的协同关系', links: [{ name: '组织架构图', url: '#' }], action: 'orgChart', actionLabel: '查看架构', deliverable: '组织架构图学习笔记' },
-          { title: '学习部门知识库', description: '阅读部门知识库文档，了解部门核心职责、业务范围和工作流程', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '部门知识库学习总结' },
-          { title: '了解核心指标', description: '学习部门核心指标定义、计算口径和当前表现', links: [{ name: '数据看板', url: DEPT_INFO.dashboard }], deliverable: '' },
-          { title: '学习业务全链路', description: '深入了解供应链商家规则&体验的全链路业务流程，理解各模块之间的协作关系', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }], deliverable: '各模块业务学习报告' },
-          { title: '学习各模块业务', description: '逐一学习各业务模块的知识库、核心指标和看板，完成模块学习标记', links: modules.filter(m => m.knowledgeBase && m.knowledgeBase !== '/').map(m => ({ name: m.name, url: m.knowledgeBase })), deliverable: '' },
-          { title: '完成Owner自测题目', description: '完成各模块Owner提供的自测题目，检验对模块知识的掌握程度', deliverable: '' },
-          { title: '认识团队成员', description: '与团队成员逐一认识，了解各自负责的业务领域', action: 'chat', actionLabel: '发起聊天', deliverable: '' }
+          { title: '学习部门知识库与核心指标', description: '阅读部门知识库文档，了解部门核心职责、业务范围和工作流程；学习部门核心指标定义、计算口径和当前表现', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }, { name: '数据看板', url: DEPT_INFO.dashboard }], deliverable: '部门知识库学习总结' },
+          { title: '学习业务全链路及各模块业务，完成Owner自测', description: '深入了解供应链商家规则&体验的全链路业务流程，逐一学习各业务模块的知识库、核心指标和看板，完成模块学习标记及各模块Owner提供的自测题目', links: [{ name: '部门知识库', url: DEPT_INFO.knowledgeBase }, ...modules.filter(m => m.knowledgeBase && m.knowledgeBase !== '/').map(m => ({ name: m.name, url: m.knowledgeBase }))], deliverable: '各模块业务学习报告' }
         ],
         phase2: [
           { title: '1V1对齐OKR', description: '与主管进行1对1沟通，对齐实习期的OKR目标', action: 'okr', actionLabel: '查看OKR系统', deliverable: '实习期目标设定' },
@@ -710,20 +706,7 @@
               />
             </div>
 
-            {/* 部门信息 */}
-            <div className="bg-white rounded-xl p-4 card-shadow mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><i className="fas fa-info-circle text-blue-500"></i> 部门信息</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-gray-500">部门名称：</span>{DEPT_INFO.name}</div>
-                <div><span className="text-gray-500">主管：</span>{DEPT_INFO.manager}</div>
-                <div><span className="text-gray-500">核心指标：</span>{DEPT_INFO.coreMetrics}</div>
-                <div><span className="text-gray-500">师兄：</span>{DEPT_INFO.mentor}</div>
-                <div className="col-span-2 flex gap-2 mt-1">
-                  <a href={DEPT_INFO.knowledgeBase} target="_blank" className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100"><i className="fas fa-book mr-1"></i>部门知识库</a>
-                  <a href={DEPT_INFO.dashboard} target="_blank" className="text-xs px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100"><i className="fas fa-chart-bar mr-1"></i>数据看板</a>
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
       );
