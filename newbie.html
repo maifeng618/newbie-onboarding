@@ -477,18 +477,36 @@
               </div>
             </div>
 
-            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-              <div className="font-medium text-green-800 mb-1">本部门信息</div>
-              <div className="text-xs text-gray-600 space-y-0.5">
-                <div>主管：赵倩（谷淳）</div>
-                <div>新人：麦风 · 师兄：潇淦</div>
-              </div>
-            </div>
           </div>
         )},
         chat: { title: '发起聊天', icon: 'fa-comment-dots', content: <div className="text-center py-6 text-gray-500">请在钉钉中搜索对应同事发起聊天</div> },
         join: { title: '加入钉钉群', icon: 'fa-users', content: <div className="text-center py-6 text-gray-500">请在钉钉中搜索部门群组并申请加入<br/>或联系师兄/主管邀请入群</div> },
-        merchantPortal: { title: '商家后台模拟', icon: 'fa-store', content: <div className="text-center py-6 text-gray-500">商家后台模拟环境入口<br/>请联系IT或师兄获取测试账号</div> },
+        merchantPortal: { title: '商家后台操作指引', icon: 'fa-store', content: (
+          <div className="space-y-4 text-sm">
+            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div className="font-medium text-blue-800 mb-2"><i className="fas fa-external-link-alt mr-1"></i>商家后台入口</div>
+              <a href="https://csp.aliexpress.com/m_apps/homepage-pop/newhome?channelId=2001" target="_blank" className="text-blue-600 hover:underline break-all">https://csp.aliexpress.com/m_apps/homepage-pop/newhome?channelId=2001</a>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="font-medium text-gray-800 mb-2"><i className="fas fa-user-circle mr-1"></i>账号信息</div>
+              <div className="text-gray-600 space-y-1">
+                <div><span className="text-gray-500">账号名：</span><span className="font-mono bg-white px-2 py-0.5 rounded border">aliqatest01</span></div>
+                <div><span className="text-gray-500">密码：</span>登录密码为「<span className="font-medium">域账号|域密码</span>」</div>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+              <div className="font-medium text-amber-800 mb-2"><i className="fas fa-hand-holding mr-1"></i>借用账号</div>
+              <p className="text-gray-600 mb-2">如需借用账号，请前往 TDBank 申请：</p>
+              <a href="https://tdbank.alibaba-inc.com/borrowAccount.html?spm=68a0cf5c.6444258f.0.0.6c564cdcNtzPkD#" target="_blank" className="text-blue-600 hover:underline break-all">https://tdbank.alibaba-inc.com/borrowAccount.html?spm=68a0cf5c.6444258f.0.0.6c564cdcNtzPkD#</a>
+            </div>
+
+            <div className="text-xs text-gray-400 pt-1">
+              <i className="fas fa-lightbulb mr-1 text-yellow-500"></i>建议：登录后重点熟悉商品发布、订单管理、物流设置等核心功能模块。
+            </div>
+          </div>
+        )},
         visit: { title: '走访登记', icon: 'fa-walking', content: (
           <div className="space-y-3">
             <div><label className="text-sm text-gray-600">走访类型</label><select className="w-full text-sm mt-1"><option>商家走访</option><option>仓库走访</option></select></div>
