@@ -667,11 +667,11 @@
 
       function getAllTasks() {
         return [
-          ...getTasksForPhase('phase1', MODULES),
-          ...getTasksForPhase('phase2', MODULES),
-          ...getTasksForPhase('phase3', MODULES),
-          ...getTasksForPhase('phase4', MODULES)
-        ].map(t => ({ ...t, phase: t.phase || 'phase1' }));
+          ...getTasksForPhase('phase1', MODULES).map(t => ({ ...t, phase: 'phase1' })),
+          ...getTasksForPhase('phase2', MODULES).map(t => ({ ...t, phase: 'phase2' })),
+          ...getTasksForPhase('phase3', MODULES).map(t => ({ ...t, phase: 'phase3' })),
+          ...getTasksForPhase('phase4', MODULES).map(t => ({ ...t, phase: 'phase4' }))
+        ];
       }
 
       const progressData = {
